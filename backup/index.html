@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <title>全国地番・ハザードマップビューア</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link
+    rel="stylesheet"
+    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+  />
+  <style>
+    html, body, #map {
+      height: 100%;
+      margin: 0;
+    }
+  </style>
+</head>
+<body>
+  <div id="map"></div>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script>
+    const map = L.map('map').setView([35.54427650212612, 134.8203470457028], 13); // 初期位置：豊岡市
+
+    // ベースマップ：Google地図
+    const googleMap = L.tileLayer('https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}', {
+      attribution: '© Google',
+      maxZoom: 20
+    }).addTo(map);
+
+    // 航空写真（GSI）
+    const gsiPhoto = L.tileLayer('https://cyberjapandata.gsi.go.jp/xyz/ort/{z}/{x}/{y}.jpg', {
+      attribution: '国土地理院',
+      maxZoom: 18
+    });
+
+    // ハザードマップレイヤー
+    const hazardLayers = {
+      洪水: L.tileLayer('https://disaportal.gsi.go.jp/raster/flood/{z}/{x}/{y}.png', { opacity: 0.5 }),
+      土砂災害: L.tileLayer('https://disaportal.gsi.go.jp/raster/landslide/{z}/{x}/{y}.png', { opacity: 0.5 }),
+      津波: L.tileLayer('https://disaportal.gsi.go.jp/raster/tsunami/{z}/{x}/{y}.png', { opacity: 0.5 }),
+      液状化: L.tileLayer('https://disaportal.gsi.go.jp/raster/liquefaction/{z}/{x}/{y}.png', { opacity: 0.5 })
+    };
+
+    // 地番ポリゴン（仮：豊岡市のGeoJSONをGoogleドライブなどに保存してURL指定）
+    const parcelLayer = L.geoJSON(null, {
+      onEachFeature: (feature, layer) => {
+        layer.bindPopup(`
+  <b>${feature.properties["市町村名"]}</b><br>
+  ${feature.properties["大字名"] || ''} ${feature.properties["地番"] || ''}
+`);
+
+      },
+      style: {
+        color: '#ff6600',
+        weight: 1,
+        fillOpacity: 0.2
+      }
+    });
+
+    // GeoJSONを読み込み（Googleドライブの公開URLに差し替えてください）
+    fetch('https://drive.google.com/uc?export=download&id=1W82JqSZ-zsdSq3r34egIRGORHQeSjKHk')
+  .then(res => res.json())
+  .then(data => {
+    parcelLayer.addData(data);
+    parcelLayer.addTo(map); // ← これを追加！
+  });
+
+
+    // レイヤー切り替えUI
+    const baseMaps = {
+      "Google地図": googleMap,
+      "航空写真（GSI）": gsiPhoto
+    };
+
+    const overlayMaps = {
+      "地番ポリゴン": parcelLayer,
+      ...hazardLayers
+    };
+
+    L.control.layers(baseMaps, overlayMaps).addTo(map);
+  </script>
+</body>
+</html>
