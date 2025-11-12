@@ -30,7 +30,7 @@
 
   <!-- 検索フォーム -->
   <div id="searchContainer">
-    <input type="text" id="searchBox" placeholder="例: 豊岡市 上陰 183-1">
+    <input type="text" id="searchBox" placeholder="例: 豊岡市 出石町奥小野 1">
     <button onclick="searchParcel()">検索</button>
   </div>
 
@@ -80,3 +80,45 @@
         parcelLayer.addData(data);
         parcelLayer.addTo(map);
         map.fitBounds(parcelLayer.getBounds());
+      });
+
+    // 地番検索機能（住所形式）
+    window.searchParcel = function() {
+      const query = document.getElementById('searchBox').value.trim();
+      if (!query) return;
+
+      let found = false;
+
+      parcelLayer.eachLayer(layer => {
+        const props = layer.feature.properties;
+        const label = `${props["市町村名"]} ${props["大字名"] || ''} ${props["地番"] || ''}`.trim();
+
+        console.log("検索対象:", label); // デバッグ用
+
+        if (label.includes(query)) {
+          map.fitBounds(layer.getBounds());
+          layer.openPopup();
+          found = true;
+        }
+      });
+
+      if (!found) {
+        alert("該当する地番が見つかりませんでした。");
+      }
+    };
+
+    // レイヤー切り替えUI
+    const baseMaps = {
+      "Google地図": googleMap,
+      "航空写真（GSI）": gsiPhoto
+    };
+
+    const overlayMaps = {
+      "地番ポリゴン": parcelLayer,
+      ...hazardLayers
+    };
+
+    L.control.layers(baseMaps, overlayMaps).addTo(map);
+  </script>
+</body>
+</html>
