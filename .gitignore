@@ -1,0 +1,15 @@
+# Windows system files
+desktop.ini
+Thumbs.db
+
+# IDE settings
+.vscode/
+.idea/
+
+# Build or cache
+node_modules/
+dist/
+*.log
+
+# Temporary files
+*.tmp
