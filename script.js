@@ -1,4 +1,4 @@
-const map = L.map('map').setView([35.54427650212612, 134.8203470457028], 13); // 初期位置：豊岡市
+const map = L.map('map').setView([35.54427650212612, 134.8203470457028], 15); // 豊岡市中心＋ズーム調整
 
 // ベースマップ：Google地図
 const googleMap = L.tileLayer('https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}', {
@@ -12,16 +12,16 @@ const gsiPhoto = L.tileLayer('https://cyberjapandata.gsi.go.jp/xyz/ort/{z}/{x}/{
   maxZoom: 18
 });
 
-// ハザードマップレイヤー
+// ハザードマップレイヤー（opacity調整済み）
 const hazardLayers = {
-  洪水: L.tileLayer('https://disaportal.gsi.go.jp/raster/flood/{z}/{x}/{y}.png', { opacity: 0.5 }),
-  土砂災害: L.tileLayer('https://disaportal.gsi.go.jp/raster/landslide/{z}/{x}/{y}.png', { opacity: 0.5 }),
-  津波: L.tileLayer('https://disaportal.gsi.go.jp/raster/tsunami/{z}/{x}/{y}.png', { opacity: 0.5 }),
-  液状化: L.tileLayer('https://disaportal.gsi.go.jp/raster/liquefaction/{z}/{x}/{y}.png', { opacity: 0.5 })
+  洪水: L.tileLayer('https://disaportal.gsi.go.jp/raster/flood/{z}/{x}/{y}.png', { opacity: 0.8 }),
+  土砂災害: L.tileLayer('https://disaportal.gsi.go.jp/raster/landslide/{z}/{x}/{y}.png', { opacity: 0.8 }),
+  津波: L.tileLayer('https://disaportal.gsi.go.jp/raster/tsunami/{z}/{x}/{y}.png', { opacity: 0.8 }),
+  液状化: L.tileLayer('https://disaportal.gsi.go.jp/raster/liquefaction/{z}/{x}/{y}.png', { opacity: 0.8 })
 };
 
 // 地番ポリゴンレイヤー（GeoJSONから読み込み）
-const parcelIndex = {}; // 検索用インデックス
+const parcelIndex = {};
 const parcelLayer = L.geoJSON(null, {
   onEachFeature: (feature, layer) => {
     const props = feature.properties;
@@ -33,7 +33,6 @@ const parcelLayer = L.geoJSON(null, {
   style: { color: '#ff6600', weight: 0.5, fillOpacity: 0.1 }
 });
 
-// GeoJSONを読み込み
 fetch('geojson/28209__5_r.geojson')
   .then(res => res.json())
   .then(data => {
@@ -42,7 +41,6 @@ fetch('geojson/28209__5_r.geojson')
     map.fitBounds(parcelLayer.getBounds());
   });
 
-// 検索機能（インデックス利用で高速化）
 window.searchParcel = function() {
   const query = document.getElementById('searchBox').value.trim();
   const layer = parcelIndex[query];
@@ -66,3 +64,6 @@ const overlayMaps = {
 };
 
 L.control.layers(baseMaps, overlayMaps).addTo(map);
+
+// 初期表示で洪水レイヤーを追加
+hazardLayers.洪水.addTo(map);
