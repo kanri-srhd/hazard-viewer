@@ -64,7 +64,11 @@
   .then(data => {
     parcelLayer.addData(data);
     parcelLayer.addTo(map);
-  });
+
+    // 読み込んだポリゴンの範囲にズーム
+    map.fitBounds(parcelLayer.getBounds());
+  })
+  .catch(err => console.error("GeoJSON load error:", err));
 
 
 
