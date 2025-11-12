@@ -58,13 +58,15 @@
       }
     });
 
-    // GeoJSONを読み込み（Googleドライブの公開URLに差し替えてください）
-    fetch('https://drive.google.com/uc?export=download&id=1W82JqSZ-zsdSq3r34egIRGORHQeSjKHk')
+    // GeoJSONを読み込み
+  fetch('geojson/28209__5_r.geojson')
   .then(res => res.json())
   .then(data => {
     parcelLayer.addData(data);
-    parcelLayer.addTo(map); // ← これを追加！
+    parcelLayer.addTo(map);
   });
+
+
 
 
     // レイヤー切り替えUI
