@@ -255,6 +255,15 @@
             map.on('load', () => {
                 addStatus('マップ読み込み完了', 'success');
                 loadGeoJSONData();
+                
+                // Clear detail and popups when clicking outside features
+                map.on('click', (e) => {
+                    const features = map.queryRenderedFeatures(e.point, { layers: ['cadastral-layer','flood-layer','landslide-layer','tsunami-layer'] });
+                    if (!features || features.length === 0) {
+                        clearDetail();
+                        if (window.__pinnedPopup) { try { window.__pinnedPopup.remove(); } catch (err) {} window.__pinnedPopup = null; }
+                    }
+                });
             });
             
             map.on('error', (err) => {
@@ -409,17 +418,6 @@
         }
         
         // ==========================================
-        // レイヤ切り替え
-        // ==========================================
-        // Clear detail and popups when clicking outside features
-        map.on('click', (e) => {
-            const features = map.queryRenderedFeatures(e.point, { layers: ['cadastral-layer','flood-layer','landslide-layer','tsunami-layer'] });
-            if (!features || features.length === 0) {
-                clearDetail();
-                if (window.__pinnedPopup) { try { window.__pinnedPopup.remove(); } catch (err) {} window.__pinnedPopup = null; }
-            }
-        });
-
         // Utilities for detail display
         function formatPropsBrief(props) {
             if (!props) return '<div>情報なし</div>';
