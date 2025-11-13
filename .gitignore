@@ -1,6 +1,11 @@
 # Windows system files
 desktop.ini
 Thumbs.db
+ehthumbs.db
+
+# macOS
+.DS_Store
+Icon?
 
 # IDE settings
 .vscode/
@@ -9,13 +14,31 @@ Thumbs.db
 # Build or cache
 node_modules/
 dist/
+.cache/
+out/
+tmp/
+
+# Logs
 *.log
 
 # Temporary files
 *.tmp
 
-# macOS
-.DS_Store
-coverage/
-
+# Env files
 .env
+.env.local
+.env.*.backup
+
+# Test coverage
+coverage/
+*.test.js.snap
+
+# GIS large data
+*.geojson
+*.mbtiles
+*.pmtiles
+tiles/
+
+# Allow test-phase GeoJSON/PMTiles inside `geojson/` directory
+!geojson/*.geojson
+!geojson/*.pmtiles
