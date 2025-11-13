@@ -273,3 +273,12 @@ fetch('geojson/hazard_sample_tsunami_osaka.geojson')
     console.error('津波ハザード読み込みエラー:', err);
     addStatus('津波ハザード読み込み失敗', 'error');
   });
+
+// 小ヘルパー: PMTiles 統合ビューアを別タブで開く
+function openPmtilesViewer() {
+  var url = window.location.origin + '/hazard-viewer/docs/pmtiles-viewer.html';
+  window.open(url, '_blank');
+}
+
+// グローバルに公開
+window.openPmtilesViewer = openPmtilesViewer;
