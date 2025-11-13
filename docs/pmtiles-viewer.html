@@ -240,100 +240,86 @@
 
     addStatus('PMTiles (地籍) とハザードデータを準備中...', 'loading');
 
-    // pmtiles プロトコルを登録（pmtiles:// スキームを使えるようにする）
+    // GeoJSON を検索/ポップアップ用にロード（メイン表示）
     var cadastralVectorLayer = null;
     var cadastralGeojson = null;
     var parcelLayerForSearch = null;
-    (function registerPmtilesProtocolAndLoad() {
-      // まず GeoJSON は検索用に常にロードしておく
-      fetch('../geojson/27128__6_r_2024.geojson')
-        .then(function(res) { return res.json(); })
-        .then(function(geojson) {
-          cadastralGeojson = geojson;
-          parcelLayerForSearch = L.geoJSON(geojson, {style:function(){return {color:'#333', weight:1, fillColor:'#ffcc00', fillOpacity:0.4};}});
-          addStatus('GeoJSON（検索用）を読み込みました: ' + geojson.features.length + ' 件', 'success');
-        })
-        .catch(function(err){ console.warn('GeoJSON (search) 読み込み失敗', err); addStatus('GeoJSON (search) 読み込み失敗', 'error'); });
 
-      // 次に pmtiles.js が利用可能か確認して登録
-      if (window.pmtiles && typeof pmtiles.Protocol === 'function' && typeof pmtiles.PMTiles === 'function') {
-        try {
-          const protocol = new pmtiles.Protocol({metadata:true});
-          pmtiles.set_protocol(protocol);
-          addStatus('PMTiles プロトコルを登録しました', 'success');
+    addStatus('GeoJSON（地籍）を読み込み中...', 'loading');
+    fetch('../geojson/27128__6_r_2024.geojson')
+      .then(function(res) { return res.json(); })
+      .then(function(geojson) {
+        cadastralGeojson = geojson;
+        
+        // スタイル定義
+        var cadastralStyle = {
+          color: '#333',
+          weight: 1,
+          opacity: 1,
+          fillColor: '#ffcc00',
+          fillOpacity: 0.4
+        };
 
-          // VectorGrid を使って docs/data/chuo-ku.pmtiles を描画
-          cadastralVectorLayer = L.vectorGrid.protobuf('pmtiles://./data/chuo-ku.pmtiles/{z}/{x}/{y}.pbf', {
-            vectorTileLayerStyles: {
-              cadastral: function(properties, zoom) {
-                return {
-                  fill: true,
-                  fillColor: '#ffcc00',
-                  fillOpacity: 0.4,
-                  color: '#333',
-                  weight: 1
-                };
-              }
-            },
-            interactive: true,
-            getFeatureId: function(feature) {
-              return (feature && feature.properties && (feature.properties['地番'] || feature.properties.id || feature.id)) || null;
-            }
-          }).addTo(map);
-
-          cadastralVectorLayer.on('click', function(e) {
-            var props = e.properties || e.layer && e.layer.properties || {};
+        // GeoJSON レイヤを作成して表示
+        cadastralVectorLayer = L.geoJSON(geojson, {
+          style: cadastralStyle,
+          onEachFeature: function(feature, layer) {
+            var props = feature.properties || {};
             var popupHtml = '<div style="font-size:12px; max-width:300px;"><strong>地籍</strong><br>';
             if (props['大字']) popupHtml += '大字: ' + props['大字'] + '<br>';
             if (props['町']) popupHtml += '町: ' + props['町'] + '<br>';
             if (props['地番']) popupHtml += '<strong>地番: ' + props['地番'] + '</strong><br>';
             if (props['住所']) popupHtml += '住所: ' + props['住所'] + '<br>';
             if (props['精度']) popupHtml += '精度区分: ' + props['精度'] + '<br>';
-            if (e.latlng) popupHtml += '<a href="https://maps.google.com/?q=' + e.latlng.lat + ',' + e.latlng.lng + '" target="_blank">📍 Google Maps で開く</a>';
+            
+            // Google Maps リンク
+            if (feature.geometry.type === 'Polygon') {
+              var coords = feature.geometry.coordinates[0][0];
+              var lat = coords[1];
+              var lng = coords[0];
+              popupHtml += '<a href="https://maps.google.com/?q=' + lat + ',' + lng + '" target="_blank">📍 Google Maps で開く</a>';
+            }
             popupHtml += '</div>';
-            L.popup().setLatLng(e.latlng).setContent(popupHtml).openOn(map);
-          });
-
-          cadastralVectorLayer.on('mouseover', function(e) {
-            try {
-              var id = e.properties && (e.properties['地番'] || e.properties.id);
-              if (id) cadastralVectorLayer.setFeatureStyle(id, {weight:2, fillOpacity:0.6, fillColor:'#ff9800'});
-            } catch (err) { }
-          });
-          cadastralVectorLayer.on('mouseout', function(e) {
-            try {
-              var id = e.properties && (e.properties['地番'] || e.properties.id);
-              if (id) cadastralVectorLayer.resetFeatureStyle(id);
-            } catch (err) { }
-          });
-
-        } catch (e) {
-          console.warn('PMTiles Protocol の登録に失敗:', e);
-          addStatus('PMTiles Protocol 登録失敗（フォールバックで GeoJSON を使用）', 'error');
-          // フォールバック表示: GeoJSON を地図に追加
-          if (parcelLayerForSearch) parcelLayerForSearch.addTo(map);
-          else addStatus('GeoJSON の表示も未完了です', 'error');
-        }
-      } else {
-        console.warn('pmtiles.js が読み込まれていないか、Protocol が利用できません');
-        addStatus('pmtiles.js が読み込まれていません（フォールバックで GeoJSON を使用）', 'error');
-        // フォールバック表示: GeoJSON を地図に追加
-        var waitCount = 0;
-        var waitInterval = setInterval(function(){
-          if (parcelLayerForSearch) {
-            parcelLayerForSearch.addTo(map);
-            clearInterval(waitInterval);
-            addStatus('フォールバック: GeoJSON を地図に表示しました', 'success');
-          } else {
-            waitCount++;
-            if (waitCount > 10) { clearInterval(waitInterval); addStatus('GeoJSON 読み込みタイムアウト', 'error'); }
+            
+            layer.bindPopup(popupHtml);
+            
+            // マウスホバーでハイライト
+            layer.on('mouseover', function() {
+              this.setStyle({
+                fillColor: '#ff9800',
+                fillOpacity: 0.6,
+                weight: 2
+              });
+            });
+            layer.on('mouseout', function() {
+              this.setStyle({
+                fillColor: '#ffcc00',
+                fillOpacity: 0.4,
+                weight: 1
+              });
+            });
+            
+            // クリックでポップアップ表示
+            layer.on('click', function() {
+              this.openPopup();
+            });
           }
-        }, 300);
-      }
-    })();
+        });
 
-    // フォールバック：GeoJSON を検索/ポップアップ用にロード（表示は VectorGrid がメイン）
-    
+        cadastralVectorLayer.addTo(map);
+        parcelLayerForSearch = cadastralVectorLayer;
+        
+        var featureCount = geojson.features.length;
+        document.getElementById('tilesLoaded').textContent = featureCount;
+        addStatus('大阪市中央区地籍データ読み込み完了 (' + featureCount + ' ポリゴン)', 'success');
+      })
+      .catch(function(err) {
+        console.error('GeoJSON 読み込みエラー:', err);
+        addStatus('地籍データ読み込み失敗', 'error');
+      });
+
+    // 注: PMTiles は MapLibre GL JS 等のベクトルタイル対応ライブラリとの連携を推奨
+    // 本実装は GeoJSON ベースの高速表示に最適化しています
 
     // =====================================
     // ハザード GeoJSON レイヤを読み込み
@@ -377,7 +363,7 @@
     ]).then(function(layers){
       // レイヤコントロールを追加
       var overlays = {
-        '地籍（PMTiles）': cadastralVectorLayer,
+        '地籍': cadastralVectorLayer,
         '洪水': hazardLayers['洪水'],
         '土砂災害': hazardLayers['土砂災害'],
         '津波': hazardLayers['津波']
