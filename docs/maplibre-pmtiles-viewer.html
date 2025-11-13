@@ -5,6 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>全国ハザードマップビューア (PMTiles + MapLibre GL)</title>
     
+    <!-- Favicon -->
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='75' font-size='75'>🗺️</text></svg>">
+    
     <!-- MapLibre GL CSS -->
     <link href="https://unpkg.com/maplibre-gl@4.0.0/dist/maplibre-gl.css" rel="stylesheet" />
     <!-- PMTiles -->
@@ -257,10 +260,29 @@
         function initMap() {
             addStatus('マップを初期化中...', 'loading');
             
-            // OSM ベースマップ
+            // MapLibre GL 互換スタイル（CORS フリー）
+            const style = {
+                version: 8,
+                sources: {
+                    'osm': {
+                        type: 'raster',
+                        tiles: ['https://tile.openstreetmap.org/{z}/{x}/{y}.png'],
+                        tileSize: 256,
+                        attribution: '© OpenStreetMap contributors'
+                    }
+                },
+                layers: [
+                    {
+                        id: 'osm',
+                        type: 'raster',
+                        source: 'osm'
+                    }
+                ]
+            };
+            
             map = new maplibregl.Map({
                 container: 'map',
-                style: 'https://tile.openstreetmap.org/style.json',
+                style: style,
                 center: [136.5, 35.5], // 日本中央（愛知県）
                 zoom: 5,
                 pitch: 0,
@@ -309,8 +331,11 @@
             // 地籍 PMTiles
             addStatus('地籍 PMTiles を読み込み中...', 'loading');
             
-            // PMTiles URL スキーム（相対パス）
-            const cadastralUrl = 'pmtiles://' + new URL('./data/cadastral_national.pmtiles', window.location.href).href.split('://')[1];
+            // PMTiles URL スキーム（GitHub Pages 環境対応）
+            const baseUrl = window.location.pathname.includes('/docs/') 
+                ? '/hazard-viewer/docs/data/'
+                : './data/';
+            const cadastralUrl = 'pmtiles://' + window.location.origin + baseUrl + 'cadastral_national.pmtiles';
             
             try {
                 // 地籍レイヤ（ポリゴン）
@@ -357,7 +382,10 @@
         // ハザード PMTiles のロード
         // ==========================================
         function loadHazardPMTiles() {
-            const hazardUrl = 'pmtiles://' + new URL('./data/hazard_integrated_national.pmtiles', window.location.href).href.split('://')[1];
+            const baseUrl = window.location.pathname.includes('/docs/') 
+                ? '/hazard-viewer/docs/data/'
+                : './data/';
+            const hazardUrl = 'pmtiles://' + window.location.origin + baseUrl + 'hazard_integrated_national.pmtiles';
             
             // 洪水
             try {
