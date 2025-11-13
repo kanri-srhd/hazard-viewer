@@ -1,124 +1,74 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="ja">
-<head>
-  <meta charset="utf-8" />
-  <title>全国地番・ハザードマップビューア</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-  <style>
-    html, body, #map {
-      height: 100%;
-      margin: 0;
-    }
-    #searchContainer {
-      position: absolute;
-      top: 10px;
-      left: 10px;
-      z-index: 1000;
-      background: white;
-      padding: 6px;
-      border-radius: 4px;
-      box-shadow: 0 0 5px rgba(0,0,0,0.3);
-    }
-    #searchBox {
-      width: 200px;
-    }
-  </style>
-</head>
-<body>
-  <div id="map"></div>
+  <head>
+    <meta charset="utf-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover"
+    />
+    <title>ハザードマップビューア</title>
 
-  <!-- 検索フォーム -->
-  <div id="searchContainer">
-    <input type="text" id="searchBox" placeholder="例: 豊岡市 出石町奥小野 1">
-    <button onclick="searchParcel()">検索</button>
-  </div>
+    <!-- Leaflet CSS -->
+    <link
+      rel="stylesheet"
+      href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+      integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tDvaZ8H1LefyL5P4Z8M8="
+      crossorigin=""
+    />
 
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  <script>
-    const map = L.map('map').setView([35.54427650212612, 134.8203470457028], 13); // 初期位置：豊岡市
+    <!-- App styles -->
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <header class="app-header">
+      <div class="brand">
+        <h1>ハザードマップビューア</h1>
+        <p class="subtitle">公式XYZタイル直利用 / GSIベース / PDL1.0準拠</p>
+      </div>
+      <nav class="actions">
+        <button id="resetView" class="btn">初期位置へ</button>
+        <button id="toggleLegend" class="btn">凡例表示/非表示</button>
+      </nav>
+    </header>
 
-    // ベースマップ：Google地図
-    const googleMap = L.tileLayer('https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}', {
-      attribution: '© Google',
-      maxZoom: 20
-    }).addTo(map);
+    <main class="app-main">
+      <div id="map"></div>
 
-    // 航空写真（GSI）
-    const gsiPhoto = L.tileLayer('https://cyberjapandata.gsi.go.jp/xyz/ort/{z}/{x}/{y}.jpg', {
-      attribution: '国土地理院',
-      maxZoom: 18
-    });
+      <aside id="legendPanel" class="panel panel-right hidden">
+        <h2>凡例</h2>
+        <div id="legendContent">
+          <p class="muted">レイヤを選択すると凡例が表示されます。</p>
+        </div>
+      </aside>
 
-    // ハザードマップレイヤー
-    const hazardLayers = {
-      洪水: L.tileLayer('https://disaportal.gsi.go.jp/raster/flood/{z}/{x}/{y}.png', { opacity: 0.5 }),
-      土砂災害: L.tileLayer('https://disaportal.gsi.go.jp/raster/landslide/{z}/{x}/{y}.png', { opacity: 0.5 }),
-      津波: L.tileLayer('https://disaportal.gsi.go.jp/raster/tsunami/{z}/{x}/{y}.png', { opacity: 0.5 }),
-      液状化: L.tileLayer('https://disaportal.gsi.go.jp/raster/liquefaction/{z}/{x}/{y}.png', { opacity: 0.5 })
-    };
+      <aside id="statusPanel" class="panel panel-left">
+        <h2>ステータス</h2>
+        <ul id="statusList" class="status-list"></ul>
+      </aside>
+    </main>
 
-    // 地番ポリゴンレイヤー（GeoJSONから読み込み）
-    const parcelLayer = L.geoJSON(null, {
-      onEachFeature: (feature, layer) => {
-        layer.bindPopup(`
-          <b>${feature.properties["市町村名"]}</b><br>
-          ${feature.properties["大字名"] || ''} ${feature.properties["地番"] || ''}
-        `);
-      },
-      style: {
-        color: '#ff6600',
-        weight: 1,
-        fillOpacity: 0.2
-      }
-    });
+    <footer class="app-footer">
+      <div class="attribution">
+        <span>
+          出典：Disaster Map Portal / MLITT / GeoInfo Japan / 国土地理院（地理院タイル）
+        </span>
+        <span class="rules">
+          利用規約：PDL1.0に準拠。地理院コンテンツ利用規約に従い出典を明記しています。
+        </span>
+        <span class="note">
+          一部レイヤは都道府県許諾に基づく範囲のみ配信。未提供エリアはUI上に明示します。
+        </span>
+      </div>
+    </footer>
 
-    // GeoJSONを読み込み
-    fetch('geojson/28209__5_r.geojson')
-      .then(res => res.json())
-      .then(data => {
-        parcelLayer.addData(data);
-        parcelLayer.addTo(map);
-        map.fitBounds(parcelLayer.getBounds());
-      });
+    <!-- Leaflet JS -->
+    <script
+      src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+      integrity="sha256-20nQCchB9co0qIjJZRGuk2/ZkLqj0u7rVQvQ2H6+kWg="
+      crossorigin=""
+    ></script>
 
-    // 地番検索機能（住所形式）
-    window.searchParcel = function() {
-      const query = document.getElementById('searchBox').value.trim();
-      if (!query) return;
-
-      let found = false;
-
-      parcelLayer.eachLayer(layer => {
-        const props = layer.feature.properties;
-        const label = `${props["市町村名"]} ${props["大字名"] || ''} ${props["地番"] || ''}`.trim();
-
-        console.log("検索対象:", label); // デバッグ用
-
-        if (label.includes(query)) {
-          map.fitBounds(layer.getBounds());
-          layer.openPopup();
-          found = true;
-        }
-      });
-
-      if (!found) {
-        alert("該当する地番が見つかりませんでした。");
-      }
-    };
-
-    // レイヤー切り替えUI
-    const baseMaps = {
-      "Google地図": googleMap,
-      "航空写真（GSI）": gsiPhoto
-    };
-
-    const overlayMaps = {
-      "地番ポリゴン": parcelLayer,
-      ...hazardLayers
-    };
-
-    L.control.layers(baseMaps, overlayMaps).addTo(map);
-  </script>
-</body>
+    <!-- App script -->
+    <script src="./app.js"></script>
+  </body>
 </html>
