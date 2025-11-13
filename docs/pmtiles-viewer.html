@@ -244,9 +244,11 @@
     var cadastralVectorLayer = null;
     var cadastralGeojson = null;
     var parcelLayerForSearch = null;
+    var hazardLayers = {};
 
     addStatus('GeoJSON（地籍）を読み込み中...', 'loading');
-    fetch('../geojson/27128__6_r_2024.geojson')
+    
+    var cadastralPromise = fetch('../geojson/27128__6_r_2024.geojson')
       .then(function(res) { return res.json(); })
       .then(function(geojson) {
         cadastralGeojson = geojson;
@@ -312,20 +314,15 @@
         var featureCount = geojson.features.length;
         document.getElementById('tilesLoaded').textContent = featureCount;
         addStatus('大阪市中央区地籍データ読み込み完了 (' + featureCount + ' ポリゴン)', 'success');
+        return geojson;
       })
       .catch(function(err) {
         console.error('GeoJSON 読み込みエラー:', err);
         addStatus('地籍データ読み込み失敗', 'error');
+        throw err;
       });
 
-    // 注: PMTiles は MapLibre GL JS 等のベクトルタイル対応ライブラリとの連携を推奨
-    // 本実装は GeoJSON ベースの高速表示に最適化しています
-
-    // =====================================
     // ハザード GeoJSON レイヤを読み込み
-    // =====================================
-    var hazardLayers = {};
-
     function loadHazard(name, url, style) {
       addStatus(name + ' を読み込み中...', 'loading');
       return fetch(url)
@@ -356,21 +353,37 @@
     var landslideStyle = { color:'#ff8c00', weight:1, fillColor:'#ff8c00', fillOpacity:0.3 };
     var tsunamiStyle = { color:'#00c8d8', weight:1, fillColor:'#00c8d8', fillOpacity:0.3 };
 
+    // 地籍（GeoJSON）とハザード（3つ）のすべてを読み込み完了後にレイヤコントロールを追加
     Promise.all([
+      cadastralPromise,
       loadHazard('洪水', '../geojson/hazard_sample_flood_osaka.geojson', floodStyle),
       loadHazard('土砂災害', '../geojson/hazard_sample_landslide_osaka.geojson', landslideStyle),
       loadHazard('津波', '../geojson/hazard_sample_tsunami_osaka.geojson', tsunamiStyle)
-    ]).then(function(layers){
-      // レイヤコントロールを追加
-      var overlays = {
-        '地籍': cadastralVectorLayer,
-        '洪水': hazardLayers['洪水'],
-        '土砂災害': hazardLayers['土砂災害'],
-        '津波': hazardLayers['津波']
-      };
-      L.control.layers(null, overlays, {collapsed:false}).addTo(map);
-      addStatus('レイヤコントロールを追加しました', 'success');
+    ]).then(function(results){
+      // すべてのデータが読み込まれた後、レイヤコントロールを追加
+      if (cadastralVectorLayer) {
+        var overlays = {
+          '地籍': cadastralVectorLayer,
+          '洪水': hazardLayers['洪水'],
+          '土砂災害': hazardLayers['土砂災害'],
+          '津波': hazardLayers['津波']
+        };
+        L.control.layers(null, overlays, {collapsed:false}).addTo(map);
+        addStatus('レイヤコントロールを追加しました', 'success');
+      } else {
+        addStatus('レイヤコントロール追加失敗: 地籍レイヤが null です', 'error');
+      }
+    }).catch(function(err){
+      console.error('レイヤ読み込みエラー:', err);
+      addStatus('一部のレイヤ読み込みに失敗しました', 'error');
     });
+
+    // 注: PMTiles は MapLibre GL JS 等のベクトルタイル対応ライブラリとの連携を推奨
+    // 本実装は GeoJSON ベースの高速表示に最適化しています
+
+    // =====================================
+    // ハザード GeoJSON レイヤを読み込み
+    // =====================================
 
     // =====================================
     // 検索機能
