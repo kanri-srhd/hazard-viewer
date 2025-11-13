@@ -1,5 +1,5 @@
-// 初期中心は旭川市周辺
-const INITIAL_VIEW = { lat: 34.686, lng: 135.499, zoom: 12 };
+// 初期中心は大阪府大阪市中央区
+const INITIAL_VIEW = { lat: 34.6901, lng: 135.5023, zoom: 12 };
 
 // GSI ベースマップ
 const BASE_LAYERS = {
@@ -153,7 +153,6 @@ document.getElementById('resetView').addEventListener('click', () => {
   map.setView([INITIAL_VIEW.lat, INITIAL_VIEW.lng], INITIAL_VIEW.zoom);
 });
 
-// 旭川市で有用そうなレイヤをデフォルトでオンにする（任意）
-hazardLeafletLayers.Flood_L2_Shinsuishin.addTo(map);
-setLegendForLayer(HAZARD_LAYERS.Flood_L2_Shinsuishin);
-legendPanel.classList.remove('hidden');
+// ハザードレイヤのデフォルト表示（現在はハザードタイルが無効化されているためスキップ）
+// 将来的にハザードタイルが有効化される際は、ここで初期レイヤを指定できます
+// 例: hazardLeafletLayers.Flood_L2_Shinsuishin?.addTo(map);
