@@ -220,6 +220,10 @@
         </div>
         
         <div id="coordDisplay" class="coord-display"></div>
+        <div id="detailPanel" class="detail-panel" style="margin-top:10px;padding:8px;border-radius:6px;border:1px solid #e6e6e6;background:#fff;">
+            <strong>詳細情報</strong>
+            <div id="detailContent" style="margin-top:8px;font-size:13px;color:#333;">地図上のフィーチャをクリックするとここに詳細が表示されます。</div>
+        </div>
     </div>
     
     <!-- MapLibre GL JS -->
@@ -594,33 +598,134 @@
             });
             
             // クリックでポップアップ表示（PMTiles の場合、フィーチャをクエリ）
-            map.on('click', 'cadastral-layer', (e) => {
-                const features = map.querySourceFeatures('cadastral-source', {
-                    sourceLayer: 'cadastral'
+                // hover & click handling for cadastral
+                let cadastralHover = null;
+                map.on('mousemove', 'cadastral-layer', (e) => {
+                    map.getCanvas().style.cursor = 'pointer';
+                    if (window.__pinnedPopup) return;
+                    const props = (e.features && e.features[0] && e.features[0].properties) || {};
+                    const brief = formatPropsBrief(props);
+                    if (cadastralHover) cadastralHover.remove();
+                    cadastralHover = new maplibregl.Popup({ closeButton: false, closeOnClick: false })
+                        .setLngLat(e.lngLat)
+                        .setHTML(brief)
+                        .addTo(map);
                 });
-                if (features.length > 0) {
+                map.on('mouseleave', 'cadastral-layer', () => {
+                    map.getCanvas().style.cursor = '';
+                    if (cadastralHover) { cadastralHover.remove(); cadastralHover = null; }
+                });
+                map.on('click', 'cadastral-layer', (e) => {
+                    const features = (e.features && e.features.length) ? e.features : map.queryRenderedFeatures(e.point, { layers: ['cadastral-layer'] });
+                    if (!features || features.length === 0) return;
                     const feature = features[0];
                     const props = feature.properties || {};
-                    let popupHtml = '<div style="font-size:12px;"><strong>地籍</strong><br>';
-                    for (let key in props) {
-                        popupHtml += `<strong>${key}</strong>: ${props[key]}<br>`;
-                    }
-                    popupHtml += '</div>';
-                    
-                    new maplibregl.Popup()
+                    if (window.__pinnedPopup) { try { window.__pinnedPopup.remove(); } catch (err) {} window.__pinnedPopup = null; }
+                    window.__pinnedPopup = new maplibregl.Popup({ closeOnClick: false })
                         .setLngLat(e.lngLat)
-                        .setHTML(popupHtml)
+                        .setHTML(formatPropsLong(props))
                         .addTo(map);
-                }
-            });
-            
-            map.on('click', 'flood-layer', (e) => {
-                new maplibregl.Popup()
-                    .setLngLat(e.lngLat)
-                    .setHTML('<strong>洪水リスクエリア</strong>')
-                    .addTo(map);
-            });
-        }
+                    // try to zoom to polygon if available
+                    try {
+                        const geom = feature.geometry || (feature.layer && feature.layer.geometry);
+                        if (geom && geom.type === 'Polygon') {
+                            const coords = geom.coordinates[0];
+                            const bounds = coords.reduce((acc, c) => ({
+                                minLng: Math.min(acc.minLng, c[0]),
+                                maxLng: Math.max(acc.maxLng, c[0]),
+                                minLat: Math.min(acc.minLat, c[1]),
+                                maxLat: Math.max(acc.maxLat, c[1])
+                            }), { minLng: Infinity, maxLng: -Infinity, minLat: Infinity, maxLat: -Infinity });
+                            map.fitBounds([[bounds.minLng, bounds.minLat], [bounds.maxLng, bounds.maxLat]], { padding: 20 });
+                        }
+                    } catch (err) {}
+                    showDetail(props, e.lngLat);
+                });
+
+                // hazard layers: simple hover and click pinned popup + detail
+                ['flood','landslide','tsunami'].forEach(id => {
+                    let hover = null;
+                    map.on('mousemove', id + '-layer', (e) => {
+                        map.getCanvas().style.cursor = 'pointer';
+                        if (window.__pinnedPopup) return;
+                        const props = (e.features && e.features[0] && e.features[0].properties) || {};
+                        const brief = formatPropsBrief(props) || ('<div>' + id + '</div>');
+                        if (hover) hover.remove();
+                        hover = new maplibregl.Popup({ closeButton: false, closeOnClick: false })
+                            .setLngLat(e.lngLat)
+                            .setHTML(brief)
+                            .addTo(map);
+                    });
+                    map.on('mouseleave', id + '-layer', () => { map.getCanvas().style.cursor = ''; if (hover) { hover.remove(); hover = null; } });
+                    map.on('click', id + '-layer', (e) => {
+                        const features = (e.features && e.features.length) ? e.features : map.queryRenderedFeatures(e.point, { layers: [id + '-layer'] });
+                        if (!features || features.length === 0) return;
+                        const props = features[0].properties || {};
+                        if (window.__pinnedPopup) { try { window.__pinnedPopup.remove(); } catch (err) {} window.__pinnedPopup = null; }
+                        window.__pinnedPopup = new maplibregl.Popup({ closeOnClick: false })
+                            .setLngLat(e.lngLat)
+                            .setHTML(formatPropsLong(props))
+                            .addTo(map);
+                        showDetail(props, e.lngLat);
+                    });
+                });
+
+                // clicking map background clears pinned popup/detail
+                map.on('click', (e) => {
+                    const features = map.queryRenderedFeatures(e.point, { layers: ['cadastral-layer','flood-layer','landslide-layer','tsunami-layer'] });
+                    if (!features || features.length === 0) {
+                        clearDetail();
+                        if (window.__pinnedPopup) { try { window.__pinnedPopup.remove(); } catch (err) {} window.__pinnedPopup = null; }
+                    }
+                });
+            }
+
+            // Utilities for detail display (global scope)
+            function formatPropsBrief(props) {
+                if (!props) return '<div>情報なし</div>';
+                const name = props.name || props.chiban || props.address || props.block || '';
+                return `<div style="font-size:12px;"><strong>${name}</strong></div>`;
+            }
+
+            function formatPropsLong(props) {
+                if (!props) return '<div>情報なし</div>';
+                let html = '<div style="font-size:13px;line-height:1.4;">';
+                Object.keys(props).forEach(k => {
+                    const v = props[k];
+                    if (v === null || v === undefined || v === '') return;
+                    html += `<div><strong>${k}</strong>: ${String(v)}</div>`;
+                });
+                html += '</div>';
+                return html;
+            }
+
+            function showDetail(props, lngLat) {
+                const el = document.getElementById('detailContent');
+                if (!el) return;
+                let html = '<div style="font-size:13px;">';
+                if (props.name) html += `<div style="font-weight:600;margin-bottom:6px">${props.name}</div>`;
+                if (props.hazard_type) html += `<div><strong>タイプ:</strong> ${props.hazard_type}</div>`;
+                if (props.severity) html += `<div><strong>重要度:</strong> ${props.severity}</div>`;
+                if (props.depth_cm) html += `<div><strong>浸水深(cm):</strong> ${props.depth_cm}</div>`;
+                if (props.depth_m) html += `<div><strong>浸水深(m):</strong> ${props.depth_m}</div>`;
+                if (props.address) html += `<div><strong>住所:</strong> ${props.address}</div>`;
+                if (props.chiban) html += `<div><strong>地番:</strong> ${props.chiban}</div>`;
+                let lat = null, lng = null;
+                if (lngLat && lngLat.lng !== undefined) { lat = lngLat.lat; lng = lngLat.lng; }
+                else if (props.latitude && props.longitude) { lat = props.latitude; lng = props.longitude; }
+                if (lat && lng) html += `<div style="margin-top:6px"><a target="_blank" href="https://www.google.com/maps/search/?api=1&query=${lat},${lng}">Google マップで開く</a></div>`;
+                html += '<div style="margin-top:8px"><button id="detailCloseBtn" class="btn">閉じる</button></div>';
+                html += '</div>';
+                el.innerHTML = html;
+                const btn = document.getElementById('detailCloseBtn');
+                if (btn) btn.addEventListener('click', clearDetail);
+            }
+
+            function clearDetail() {
+                const el = document.getElementById('detailContent');
+                if (!el) return;
+                el.innerHTML = '地図上のフィーチャをクリックするとここに詳細が表示されます。';
+            }
         
         // ==========================================
         // レイヤ表示切り替え

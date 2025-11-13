@@ -197,13 +197,93 @@ function onEachFeature(feature, layer) {
   popupContent += '</div>';
 
   layer.bindPopup(popupContent);
+  // マウスオーバーは簡易表示、クリックで詳細（固定）を表示
   layer.on('mouseover', function () {
-    this.openPopup();
+    if (!this._pinned) this.openPopup();
   });
   layer.on('mouseout', function () {
-    this.closePopup();
+    if (!this._pinned) this.closePopup();
+  });
+
+  layer.on('click', function (e) {
+    // マップの背景クリックで閉じる挙動を阻止
+    L.DomEvent.stopPropagation(e);
+    // ポップアップを開き、凡例パネルへ詳細を表示
+    this.openPopup();
+    this._pinned = true;
+    showFeatureDetail(props);
   });
 }
+
+// 詳細表示：凡例パネルを再利用して、クリック時に固定表示する
+function showFeatureDetail(props) {
+  legendContent.innerHTML = '';
+  const container = document.createElement('div');
+  container.style.fontSize = '13px';
+
+  const title = document.createElement('h3');
+  title.textContent = props.name || '詳細情報';
+  container.appendChild(title);
+
+  const table = document.createElement('div');
+  table.className = 'detail-list';
+
+  function addRow(k, v) {
+    if (v === undefined || v === null || v === '') return;
+    const p = document.createElement('p');
+    p.innerHTML = `<strong>${k}:</strong> ${v}`;
+    table.appendChild(p);
+  }
+
+  addRow('タイプ', props.hazard_type);
+  addRow('重要度', props.severity);
+  addRow('浸水深(cm)', props.depth_cm ?? (props.depth_cm === 0 ? 0 : null));
+  addRow('浸水深(m)', props.depth_m ?? (props.depth_m === 0 ? 0 : null));
+  addRow('説明', props.description);
+  addRow('住所 / 地番', props.address || props.block || props.chiban);
+
+  // Google Maps リンク（緯度経度があれば）
+  if (props.latitude && props.longitude) {
+    const a = document.createElement('a');
+    a.href = `https://www.google.com/maps/search/?api=1&query=${props.latitude},${props.longitude}`;
+    a.target = '_blank';
+    a.textContent = 'Google マップで開く';
+    table.appendChild(a);
+  }
+
+  container.appendChild(table);
+
+  // 閉じるボタン
+  const closeBtn = document.createElement('button');
+  closeBtn.textContent = '閉じる';
+  closeBtn.className = 'btn';
+  closeBtn.style.marginTop = '8px';
+  closeBtn.addEventListener('click', () => {
+    clearFeatureDetail();
+  });
+  container.appendChild(closeBtn);
+
+  legendContent.appendChild(container);
+  legendPanel.classList.remove('hidden');
+}
+
+function clearFeatureDetail() {
+  legendContent.innerHTML = '<p class="muted">レイヤを選択すると凡例が表示されます。</p>';
+  // close all popups from geojson layers and reset pinned state
+  Object.values(geojsonLayers).forEach((g) => {
+    try {
+      g.eachLayer((ly) => {
+        if (ly.closePopup) ly.closePopup();
+        ly._pinned = false;
+      });
+    } catch (e) {}
+  });
+}
+
+// map の背景クリックで詳細を閉じる（ユーザー期待）
+map.on('click', function () {
+  clearFeatureDetail();
+});
 
 // サンプルハザード GeoJSON の読み込み
 const geojsonLayers = {};
