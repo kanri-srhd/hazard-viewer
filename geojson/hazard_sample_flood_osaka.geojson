@@ -1,0 +1,51 @@
+{
+  "type": "FeatureCollection",
+  "name": "大阪市 洪水ハザード（サンプル）",
+  "crs": { "type": "name", "properties": { "name": "EPSG:4326" } },
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "淀川流域 洪水浸水想定区域",
+        "hazard_type": "flood",
+        "severity": "high",
+        "depth_cm": 200,
+        "description": "想定最大規模の降雨時における浸水深（淀川水系）"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [135.45, 34.65],
+            [135.55, 34.65],
+            [135.55, 34.72],
+            [135.45, 34.72],
+            [135.45, 34.65]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "大川 浸水想定区域",
+        "hazard_type": "flood",
+        "severity": "medium",
+        "depth_cm": 100,
+        "description": "計画規模の降雨時における浸水区域（大川周辺）"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [135.50, 34.67],
+            [135.54, 34.67],
+            [135.54, 34.70],
+            [135.50, 34.70],
+            [135.50, 34.67]
+          ]
+        ]
+      }
+    }
+  ]
+}

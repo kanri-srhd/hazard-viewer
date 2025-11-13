@@ -156,3 +156,120 @@ document.getElementById('resetView').addEventListener('click', () => {
 // ハザードレイヤのデフォルト表示（現在はハザードタイルが無効化されているためスキップ）
 // 将来的にハザードタイルが有効化される際は、ここで初期レイヤを指定できます
 // 例: hazardLeafletLayers.Flood_L2_Shinsuishin?.addTo(map);
+
+// ====================
+// GeoJSON ハザードデータの読み込み
+// ====================
+
+// GeoJSON読み込み用のスタイル関数
+function getStyleForHazard(feature) {
+  const hazardType = feature.properties?.hazard_type;
+  const severity = feature.properties?.severity;
+
+  // ハザードタイプごとの色設定
+  const colorMap = {
+    flood: '#0066cc',        // 青（洪水）
+    landslide: '#ff6600',    // オレンジ（土砂災害）
+    tsunami: '#00ccff'       // 水色（津波）
+  };
+
+  const color = colorMap[hazardType] || '#666666';
+  const opacity = severity === 'high' ? 0.7 : severity === 'medium' ? 0.5 : 0.3;
+
+  return {
+    color: color,
+    weight: 2,
+    opacity: opacity,
+    fillOpacity: opacity / 2
+  };
+}
+
+// ポップアップ表示用の関数
+function onEachFeature(feature, layer) {
+  const props = feature.properties || {};
+  let popupContent = '<div style="font-size: 12px;">';
+  popupContent += `<strong>${props.name || 'ハザード'}</strong><br>`;
+  if (props.hazard_type) popupContent += `タイプ: ${props.hazard_type}<br>`;
+  if (props.severity) popupContent += `重要度: ${props.severity}<br>`;
+  if (props.depth_cm) popupContent += `浸水深: ${props.depth_cm}cm<br>`;
+  if (props.depth_m) popupContent += `浸水深: ${props.depth_m}m<br>`;
+  if (props.description) popupContent += `${props.description}`;
+  popupContent += '</div>';
+
+  layer.bindPopup(popupContent);
+  layer.on('mouseover', function () {
+    this.openPopup();
+  });
+  layer.on('mouseout', function () {
+    this.closePopup();
+  });
+}
+
+// サンプルハザード GeoJSON の読み込み
+const geojsonLayers = {};
+
+// 洪水ハザード
+fetch('geojson/hazard_sample_flood_osaka.geojson')
+  .then(res => res.json())
+  .then(data => {
+    geojsonLayers.flood = L.geoJSON(data, {
+      style: getStyleForHazard,
+      onEachFeature: onEachFeature
+    });
+    overlayControl['洪水ハザード（サンプル）'] = geojsonLayers.flood;
+    // レイヤコントロールを再構築
+    if (map.layersControl) {
+      map.removeControl(map.layersControl);
+    }
+    map.layersControl = L.control.layers(baseControl, overlayControl, { collapsed: false });
+    map.layersControl.addTo(map);
+    addStatus('洪水ハザードレイヤを読み込みました。', 'ok');
+  })
+  .catch(err => {
+    console.error('洪水ハザード読み込みエラー:', err);
+    addStatus('洪水ハザード読み込み失敗', 'error');
+  });
+
+// 土砂災害ハザード
+fetch('geojson/hazard_sample_landslide_osaka.geojson')
+  .then(res => res.json())
+  .then(data => {
+    geojsonLayers.landslide = L.geoJSON(data, {
+      style: getStyleForHazard,
+      onEachFeature: onEachFeature
+    });
+    overlayControl['土砂災害ハザード（サンプル）'] = geojsonLayers.landslide;
+    // レイヤコントロールを再構築
+    if (map.layersControl) {
+      map.removeControl(map.layersControl);
+    }
+    map.layersControl = L.control.layers(baseControl, overlayControl, { collapsed: false });
+    map.layersControl.addTo(map);
+    addStatus('土砂災害ハザードレイヤを読み込みました。', 'ok');
+  })
+  .catch(err => {
+    console.error('土砂災害ハザード読み込みエラー:', err);
+    addStatus('土砂災害ハザード読み込み失敗', 'error');
+  });
+
+// 津波ハザード
+fetch('geojson/hazard_sample_tsunami_osaka.geojson')
+  .then(res => res.json())
+  .then(data => {
+    geojsonLayers.tsunami = L.geoJSON(data, {
+      style: getStyleForHazard,
+      onEachFeature: onEachFeature
+    });
+    overlayControl['津波ハザード（サンプル）'] = geojsonLayers.tsunami;
+    // レイヤコントロールを再構築
+    if (map.layersControl) {
+      map.removeControl(map.layersControl);
+    }
+    map.layersControl = L.control.layers(baseControl, overlayControl, { collapsed: false });
+    map.layersControl.addTo(map);
+    addStatus('津波ハザードレイヤを読み込みました。', 'ok');
+  })
+  .catch(err => {
+    console.error('津波ハザード読み込みエラー:', err);
+    addStatus('津波ハザード読み込み失敗', 'error');
+  });
