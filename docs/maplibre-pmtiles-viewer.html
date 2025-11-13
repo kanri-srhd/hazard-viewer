@@ -225,6 +225,9 @@
     <!-- MapLibre GL JS -->
     <script src="https://unpkg.com/maplibre-gl@4.0.0/dist/maplibre-gl.js"></script>
     
+    <!-- PMTiles Library -->
+    <script src="https://unpkg.com/pmtiles@3/dist/index.js"></script>
+    
     <script>
         // ==========================================
         // キャッシュバスティング & Service Worker リセット
@@ -300,8 +303,11 @@
             
             map.on('load', () => {
                 addStatus('マップ読み込み完了', 'success');
-                initPMTiles();
-                setupEventHandlers();
+                // PMTiles のロードを少し遅延させる（ライブラリ読み込み完了を待つ）
+                setTimeout(() => {
+                    initPMTiles();
+                    setupEventHandlers();
+                }, 500);
             });
             
             map.on('error', (err) => {
@@ -315,6 +321,14 @@
         // ==========================================
         function initPMTiles() {
             addStatus('PMTiles プロトコルを初期化中...', 'loading');
+            
+            // PMTiles ライブラリが存在するか確認
+            if (typeof pmtiles === 'undefined' || !pmtiles.Protocol) {
+                console.warn('PMTiles library not yet loaded, using GeoJSON fallback');
+                addStatus('PMTiles ライブラリ未読み込み → GeoJSON フォールバック', 'info');
+                loadGeoJSONFallback();
+                return;
+            }
             
             try {
                 // PMTiles Protocol を登録
