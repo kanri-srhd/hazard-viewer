@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>大阪市中央区 地番ポリゴン - PMTiles ビューア</title>
+
+  <!-- Leaflet CSS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: #f5f5f5;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    header {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      padding: 20px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      z-index: 100;
+    }
+
+    header h1 {
+      font-size: 24px;
+      margin-bottom: 5px;
+    }
+
+    header p {
+      font-size: 14px;
+      opacity: 0.9;
+    }
+
+    main {
+      flex: 1;
+      display: flex;
+      overflow: hidden;
+    }
+
+    #map {
+      flex: 1;
+      background: #e0e0e0;
+    }
+
+    .sidebar {
+      width: 300px;
+      background: white;
+      border-left: 1px solid #ddd;
+      overflow-y: auto;
+      padding: 15px;
+      box-shadow: -2px 0 8px rgba(0, 0, 0, 0.1);
+    }
+
+    .sidebar h2 {
+      font-size: 16px;
+      margin-bottom: 10px;
+      color: #333;
+      border-bottom: 2px solid #667eea;
+      padding-bottom: 8px;
+    }
+
+    .status-list {
+      list-style: none;
+      margin-bottom: 15px;
+    }
+
+    .status-item {
+      padding: 8px;
+      margin-bottom: 5px;
+      background: #f9f9f9;
+      border-left: 3px solid #667eea;
+      font-size: 13px;
+      color: #555;
+      border-radius: 2px;
+    }
+
+    .status-item.loading {
+      border-left-color: #ff9800;
+      background: #fff8f0;
+    }
+
+    .status-item.success {
+      border-left-color: #4caf50;
+      background: #f1f8f4;
+    }
+
+    .status-item.error {
+      border-left-color: #f44336;
+      background: #fef1f1;
+    }
+
+    .info-panel {
+      background: #f9f9f9;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      padding: 10px;
+      font-size: 12px;
+      margin-top: 10px;
+    }
+
+    .info-panel dt {
+      font-weight: bold;
+      color: #333;
+      margin-top: 5px;
+    }
+
+    .info-panel dd {
+      color: #666;
+      margin-left: 10px;
+      margin-bottom: 5px;
+      word-break: break-word;
+    }
+
+    .leaflet-popup-content {
+      font-size: 12px;
+      max-width: 300px;
+    }
+
+    .leaflet-popup-content a {
+      color: #667eea;
+      text-decoration: none;
+      font-weight: bold;
+    }
+
+    .leaflet-popup-content a:hover {
+      text-decoration: underline;
+    }
+
+    footer {
+      background: #333;
+      color: #999;
+      padding: 10px 20px;
+      font-size: 12px;
+      text-align: center;
+      border-top: 1px solid #555;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>大阪市中央区 地番ポリゴン ビューア</h1>
+    <p>
+      PMTiles + Leaflet | 27128__6_r_2024.geojson から生成
+    </p>
+  </header>
+
+  <main>
+    <div id="map"></div>
+
+    <aside class="sidebar">
+      <h2>読み込み状態</h2>
+      <ul id="statusList" class="status-list"></ul>
+
+      <div class="info-panel">
+        <dt>🗺️ ズーム レベル</dt>
+        <dd id="zoomLevel">14</dd>
+
+        <dt>📍 中心座標</dt>
+        <dd id="centerCoord">34.6901, 135.5023</dd>
+
+        <dt>✓ 読み込み済みポリゴン</dt>
+        <dd id="tilesLoaded">0</dd>
+
+        <dt>📦 ソース</dt>
+        <dd>
+          <a href="https://github.com/kanri-srhd/hazard-viewer" target="_blank">hazard-viewer</a> / GitHub Pages
+        </dd>
+      </div>
+    </aside>
+  </main>
+
+  <footer>
+    <p>
+      &copy; 2025 Hazard Viewer | Data: 大阪市中央区 chuo-ku.pmtiles (from 27128__6_r_2024.geojson) | License: PDL 1.0
+    </p>
+  </footer>
+
+  <!-- Leaflet JS -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+  <!-- PMTiles library -->
+  <script src="https://unpkg.com/pmtiles@3/dist/pmtiles.js"></script>
+
+  <script>
+    // =====================================
+    // ステータスパネル管理
+    // =====================================
+    const statusList = document.getElementById('statusList');
+
+    function addStatus(message, type = 'info') {
+      const li = document.createElement('li');
+      li.className = 'status-item ' + type;
+      li.textContent = message;
+      statusList.insertBefore(li, statusList.firstChild);
+
+      while (statusList.children.length > 10) {
+        statusList.removeChild(statusList.lastChild);
+      }
+    }
+
+    // =====================================
+    // 地図初期化
+    // =====================================
+    const map = L.map('map').setView([34.6901, 135.5023], 14);
+
+    // ベースマップ（GSI 淡色）
+    L.tileLayer('https://cyberjapandata.gsi.go.jp/xyz/pale/{z}/{x}/{y}.png', {
+      maxZoom: 18,
+      attribution: '&copy; <a href="https://maps.gsi.go.jp/">国土地理院</a>'
+    }).addTo(map);
+
+    addStatus('地図を初期化しました', 'success');
+
+    // =====================================
+    // GeoJSON 地籍データを読み込み
+    // =====================================
+
+    addStatus('大阪市中央区地籍データを読み込み中...', 'loading');
+
+    fetch('../geojson/27128__6_r_2024.geojson')
+      .then(function(res) {
+        return res.json();
+      })
+      .then(function(geojson) {
+        console.log('Cadastral parcels loaded:', geojson.features.length);
+
+        // スタイル定義
+        var layerStyle = {
+          color: '#333',
+          weight: 1,
+          opacity: 1,
+          fillColor: '#ffcc00',
+          fillOpacity: 0.4
+        };
+
+        // GeoJSON レイヤを作成
+        var parcelLayer = L.geoJSON(geojson, {
+          style: layerStyle,
+          onEachFeature: function(feature, layer) {
+            var props = feature.properties || {};
+
+            // ポップアップ HTML を生成
+            var popupHtml = '<div style="font-size: 12px; max-width: 300px;">';
+            popupHtml += '<strong>大阪市中央区</strong><br>';
+
+            if (props['大字'])
+              popupHtml += '大字: ' + props['大字'] + '<br>';
+            if (props['町'])
+              popupHtml += '町: ' + props['町'] + '<br>';
+            if (props['地番'])
+              popupHtml += '<strong>地番: ' + props['地番'] + '</strong><br>';
+            if (props['住所'])
+              popupHtml += '住所: ' + props['住所'] + '<br>';
+            if (props['精度'])
+              popupHtml += '精度区分: ' + props['精度'] + '<br>';
+
+            // Google Maps リンク
+            if (feature.geometry.type === 'Polygon') {
+              var coords = feature.geometry.coordinates[0][0];
+              var lat = coords[1];
+              var lng = coords[0];
+              popupHtml += '<a href="https://maps.google.com/?q=' + lat + ',' + lng + '" target="_blank" style="color: #667eea; text-decoration: none; font-weight: bold;">📍 Google Maps で開く</a>';
+            }
+
+            popupHtml += '</div>';
+
+            layer.bindPopup(popupHtml);
+
+            // マウスホバーでハイライト
+            layer.on('mouseover', function() {
+              this.setStyle({
+                fillColor: '#ff9800',
+                fillOpacity: 0.6,
+                weight: 2
+              });
+            });
+
+            layer.on('mouseout', function() {
+              this.setStyle({
+                fillColor: '#ffcc00',
+                fillOpacity: 0.4,
+                weight: 1
+              });
+            });
+
+            // クリックでポップアップ表示
+            layer.on('click', function() {
+              this.openPopup();
+            });
+          }
+        });
+
+        parcelLayer.addTo(map);
+        var featureCount = geojson.features.length;
+        document.getElementById('tilesLoaded').textContent = featureCount;
+
+        addStatus(
+          '大阪市中央区地籍データ読み込み完了 (' + featureCount + ' ポリゴン)',
+          'success'
+        );
+      })
+      .catch(function(err) {
+        console.error('地籍データ読み込みエラー:', err);
+        addStatus('地籍データ読み込み失敗', 'error');
+      });
+
+    // =====================================
+    // 地図操作監視
+    // =====================================
+
+    map.on('zoomend', function() {
+      document.getElementById('zoomLevel').textContent = map.getZoom();
+    });
+
+    map.on('moveend', function() {
+      var center = map.getCenter();
+      document.getElementById('centerCoord').textContent = center.lat.toFixed(4) + ', ' + center.lng.toFixed(4);
+    });
+
+    addStatus('ビューア準備完了 - ポリゴンをクリックして地番情報を表示', 'success');
+  </script>
+</body>
+</html>
