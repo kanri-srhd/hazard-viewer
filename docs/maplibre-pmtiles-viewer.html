@@ -227,6 +227,15 @@
     
     <script>
         // ==========================================
+        // キャッシュバスティング & Service Worker リセット
+        // ==========================================
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.getRegistrations().then(registrations => {
+                registrations.forEach(reg => reg.unregister());
+            });
+        }
+        
+        // ==========================================
         // グローバル変数
         // ==========================================
         let map;

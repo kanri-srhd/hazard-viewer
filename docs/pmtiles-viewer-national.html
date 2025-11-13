@@ -539,6 +539,15 @@
     }
 
     // =====================================
+    // キャッシュバスティング & Service Worker リセット
+    // =====================================
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.getRegistrations().then(registrations => {
+        registrations.forEach(reg => reg.unregister());
+      });
+    }
+
+    // =====================================
     // 初期化
     // =====================================
     document.addEventListener('DOMContentLoaded', () => {
