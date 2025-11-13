@@ -23,52 +23,54 @@ const BASE_LAYERS = {
 // 公式ハザード XYZ タイル（例）
 const HAZARD_LAYERS = {
   // 洪水（想定最大規模・全国統合）
+  // 注: disaportaldata.gsi.go.jp の各タイルの利用可能性は地域・時期により異なります
+  // テスト期間中はこのレイヤーを無効化しています（実装時に API 確認が必要）
   Flood_L2_Shinsuishin: {
-    name: '洪水（想定最大規模・全国統合）',
-    url: 'https://disaportaldata.gsi.go.jp/raster/01_flood_l2_shinsuishin_data/{z}/{x}/{y}.png',
+    name: '洪水（想定最大規模・全国統合）[準備中]',
+    url: 'https://disaportal.gsi.go.jp/raster/01_flood_l2_shinsuishin_data/{z}/{x}/{y}.png',
     maxZoom: 18,
     opacity: 0.7,
-    legendImg: 'https://disaportaldata.gsi.go.jp/raster/legend/01_flood_l2_shinsuishin_legend.png'
+    legendImg: 'https://disaportal.gsi.go.jp/raster/01_flood_l2_shinsuishin_legend.png'
   },
   // 洪水（計画規模・全国統合・新凡例）
   Flood_L1_Shinsuishin_NewLegend: {
-    name: '洪水（計画規模・全国統合・新凡例）',
-    url: 'https://disaportaldata.gsi.go.jp/raster/01_flood_l1_shinsuishin_newlegend_data/{z}/{x}/{y}.png',
+    name: '洪水（計画規模・全国統合・新凡例）[準備中]',
+    url: 'https://disaportal.gsi.go.jp/raster/01_flood_l1_shinsuishin_newlegend_data/{z}/{x}/{y}.png',
     maxZoom: 18,
     opacity: 0.7,
-    legendImg: 'https://disaportaldata.gsi.go.jp/raster/legend/01_flood_l1_shinsuishin_newlegend_legend.png'
+    legendImg: 'https://disaportal.gsi.go.jp/raster/01_flood_l1_shinsuishin_newlegend_legend.png'
   },
   // 高潮（想定最大規模）
   Hightide_L2_Shinsuishin: {
-    name: '高潮（想定最大規模）',
-    url: 'https://disaportaldata.gsi.go.jp/raster/03_hightide_l2_shinsuishin_data/{z}/{x}/{y}.png',
+    name: '高潮（想定最大規模）[準備中]',
+    url: 'https://disaportal.gsi.go.jp/raster/03_hightide_l2_shinsuishin_data/{z}/{x}/{y}.png',
     maxZoom: 18,
     opacity: 0.7,
-    legendImg: 'https://disaportaldata.gsi.go.jp/raster/legend/03_hightide_l2_shinsuishin_legend.png'
+    legendImg: 'https://disaportal.gsi.go.jp/raster/03_hightide_l2_shinsuishin_legend.png'
   },
   // 津波（新凡例）
   Tsunami_NewLegend: {
-    name: '津波（新凡例）',
-    url: 'https://disaportaldata.gsi.go.jp/raster/04_tsunami_newlegend_data/{z}/{x}/{y}.png',
+    name: '津波（新凡例）[準備中]',
+    url: 'https://disaportal.gsi.go.jp/raster/04_tsunami_newlegend_data/{z}/{x}/{y}.png',
     maxZoom: 18,
     opacity: 0.7,
-    legendImg: 'https://disaportaldata.gsi.go.jp/raster/legend/04_tsunami_newlegend_legend.png'
+    legendImg: 'https://disaportal.gsi.go.jp/raster/04_tsunami_newlegend_legend.png'
   },
   // 土砂災害（土石流警戒区域・全国）
   Dosekiryuu_Keikai_Zone_All: {
-    name: '土砂災害（土石流警戒区域・全国）',
-    url: 'https://disaportaldata.gsi.go.jp/raster/05_dosekiryukeikaikuiki/{z}/{x}/{y}.png',
+    name: '土砂災害（土石流警戒区域・全国）[準備中]',
+    url: 'https://disaportal.gsi.go.jp/raster/05_dosekiryukeikaikuiki/{z}/{x}/{y}.png',
     maxZoom: 18,
     opacity: 0.7,
-    legendImg: 'https://disaportaldata.gsi.go.jp/raster/legend/05_dosekiryukeikaikuiki_legend.png'
+    legendImg: 'https://disaportal.gsi.go.jp/raster/05_dosekiryukeikaikuiki_legend.png'
   },
   // 土砂災害（土石流警戒区域・都道府県別: 28=兵庫の例）
   Dosekiryuu_Keikai_Zone_Pref28: {
-    name: '土砂災害（土石流警戒区域・兵庫）',
-    url: 'https://disaportaldata.gsi.go.jp/raster/05_dosekiryukeikaikuiki_data/28/{z}/{x}/{y}.png',
+    name: '土砂災害（土石流警戒区域・兵庫）[準備中]',
+    url: 'https://disaportal.gsi.go.jp/raster/05_dosekiryukeikaikuiki_data/28/{z}/{x}/{y}.png',
     maxZoom: 18,
     opacity: 0.7,
-    legendImg: 'https://disaportaldata.gsi.go.jp/raster/legend/05_dosekiryukeikaikuiki_legend.png'
+    legendImg: 'https://disaportal.gsi.go.jp/raster/05_dosekiryukeikaikuiki_legend.png'
   }
 };
 
