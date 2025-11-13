@@ -1,0 +1,546 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>全国ハザードマップビューア (GeoJSON + Leaflet)</title>
+
+  <!-- Leaflet CSS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: #f5f5f5;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    header {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      padding: 15px 20px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      z-index: 100;
+    }
+
+    header h1 {
+      font-size: 20px;
+      margin-bottom: 8px;
+    }
+
+    header p {
+      font-size: 13px;
+      opacity: 0.9;
+    }
+
+    main {
+      flex: 1;
+      display: flex;
+      overflow: hidden;
+    }
+
+    #map {
+      flex: 1;
+      background: #e0e0e0;
+    }
+
+    .sidebar {
+      width: 320px;
+      background: white;
+      border-left: 1px solid #ddd;
+      overflow-y: auto;
+      padding: 15px;
+      box-shadow: -2px 0 8px rgba(0, 0, 0, 0.1);
+    }
+
+    .sidebar h2 {
+      font-size: 14px;
+      margin-bottom: 10px;
+      color: #333;
+      border-bottom: 2px solid #667eea;
+      padding-bottom: 8px;
+    }
+
+    .region-selector {
+      margin-bottom: 12px;
+      padding: 10px;
+      background: #f9f9f9;
+      border-radius: 4px;
+    }
+
+    .region-selector select {
+      width: 100%;
+      padding: 8px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      font-size: 13px;
+    }
+
+    .layer-controls {
+      margin-bottom: 12px;
+      padding: 10px;
+      background: #f9f9f9;
+      border-radius: 4px;
+    }
+
+    .layer-controls h3 {
+      font-size: 13px;
+      margin-bottom: 8px;
+      color: #333;
+    }
+
+    .layer-item {
+      display: flex;
+      align-items: center;
+      margin-bottom: 6px;
+      font-size: 12px;
+    }
+
+    .layer-item input[type="checkbox"] {
+      margin-right: 6px;
+      cursor: pointer;
+    }
+
+    .layer-item label {
+      cursor: pointer;
+      user-select: none;
+    }
+
+    .search-box {
+      margin-bottom: 12px;
+    }
+
+    .search-box input {
+      width: 100%;
+      padding: 8px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      font-size: 13px;
+      margin-bottom: 5px;
+    }
+
+    .search-box button {
+      width: 100%;
+      padding: 8px;
+      background: #0b66ff;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 12px;
+    }
+
+    .search-box button:hover {
+      background: #0854cc;
+    }
+
+    .status-list {
+      list-style: none;
+      margin-bottom: 12px;
+      max-height: 150px;
+      overflow-y: auto;
+    }
+
+    .status-item {
+      padding: 8px;
+      margin-bottom: 5px;
+      background: #f9f9f9;
+      border-left: 3px solid #667eea;
+      font-size: 11px;
+      color: #555;
+      border-radius: 2px;
+    }
+
+    .status-item.loading {
+      border-left-color: #ff9800;
+      background: #fff8f0;
+    }
+
+    .status-item.success {
+      border-left-color: #4caf50;
+      background: #f1f8f4;
+    }
+
+    .status-item.error {
+      border-left-color: #f44336;
+      background: #fef1f1;
+    }
+
+    .info-box {
+      background: #f0f8ff;
+      border: 1px solid #90caf9;
+      border-radius: 4px;
+      padding: 8px;
+      font-size: 11px;
+      color: #333;
+      line-height: 1.4;
+    }
+
+    footer {
+      background: #333;
+      color: white;
+      padding: 10px 20px;
+      text-align: center;
+      font-size: 12px;
+      border-top: 1px solid #ddd;
+    }
+
+    footer a {
+      color: #90caf9;
+      text-decoration: none;
+    }
+
+    footer a:hover {
+      text-decoration: underline;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>🗺️ 全国ハザードマップビューア</h1>
+    <p>地籍・洪水・土砂災害・津波の統合表示 (GeoJSON + MapLibre GL対応)</p>
+  </header>
+
+  <main>
+    <div id="map"></div>
+
+    <aside class="sidebar">
+      <h2>地域選択</h2>
+      <div class="region-selector">
+        <select id="regionSelect" onchange="switchRegion()">
+          <option value="national">🗾 全国</option>
+          <option value="osaka">🏯 大阪府（中央区）</option>
+          <option value="tokyo">🗼 東京都（サンプル）</option>
+          <option value="kyoto">⛩️ 京都府（サンプル）</option>
+        </select>
+      </div>
+
+      <h2>ステータス</h2>
+      <ul id="statusList" class="status-list"></ul>
+
+      <h2>レイヤ表示</h2>
+      <div class="layer-controls">
+        <div class="layer-item">
+          <input type="checkbox" id="toggle-cadastral" checked onchange="toggleLayer('cadastral')">
+          <label for="toggle-cadastral">地籍</label>
+        </div>
+        <div class="layer-item">
+          <input type="checkbox" id="toggle-flood" checked onchange="toggleLayer('flood')">
+          <label for="toggle-flood">洪水</label>
+        </div>
+        <div class="layer-item">
+          <input type="checkbox" id="toggle-landslide" checked onchange="toggleLayer('landslide')">
+          <label for="toggle-landslide">土砂災害</label>
+        </div>
+        <div class="layer-item">
+          <input type="checkbox" id="toggle-tsunami" checked onchange="toggleLayer('tsunami')">
+          <label for="toggle-tsunami">津波</label>
+        </div>
+      </div>
+
+      <h2>検索</h2>
+      <div class="search-box">
+        <input type="text" id="searchInput" placeholder="地番 / 住所で検索...">
+        <button onclick="searchParcel()">🔍 検索</button>
+      </div>
+
+      <div class="info-box">
+        <strong>ℹ️ 使用方法</strong><br>
+        • 地域を選択するとマップが切り替わります<br>
+        • チェックでレイヤの表示・非表示を切り替え<br>
+        • 地番・住所で検索可能<br>
+        • ポリゴンをクリックで詳細情報表示<br>
+        • ホバーで強調表示
+      </div>
+    </aside>
+  </main>
+
+  <footer>
+    <p>&copy; 2025 Hazard Viewer | License: PDL 1.0 | <a href="../INSTALL_NATIONAL_DATA.md">全国データ対応ガイド</a></p>
+  </footer>
+
+  <!-- Leaflet JS -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+  <script>
+    // =====================================
+    // グローバル変数
+    // =====================================
+    const statusList = document.getElementById('statusList');
+    let map;
+    let cadastralGeojsonCache = {};
+    let layerCache = {};
+    let currentRegion = 'national';
+    
+    const regionDataMap = {
+      national: {
+        name: '全国',
+        center: [36.5, 137.5],
+        zoom: 5,
+        datasets: []
+      },
+      osaka: {
+        name: '大阪府（中央区）',
+        center: [34.6901, 135.5023],
+        zoom: 14,
+        datasets: [
+          { name: '地籍', url: '../geojson/27128__6_r_2024.geojson', layer: 'cadastral' }
+        ]
+      },
+      tokyo: {
+        name: '東京都（サンプル）',
+        center: [35.7, 139.77],
+        zoom: 12,
+        datasets: [
+          { name: '地籍', url: '../geojson/27128__6_r_2024.geojson', layer: 'cadastral' }
+        ]
+      },
+      kyoto: {
+        name: '京都府（サンプル）',
+        center: [35.0, 135.65],
+        zoom: 12,
+        datasets: [
+          { name: '地籍', url: '../geojson/27128__6_r_2024.geojson', layer: 'cadastral' }
+        ]
+      }
+    };
+
+    function addStatus(msg, type = 'info') {
+      const li = document.createElement('li');
+      li.className = 'status-item ' + type;
+      li.textContent = msg;
+      statusList.insertBefore(li, statusList.firstChild);
+      while (statusList.children.length > 10) {
+        statusList.removeChild(statusList.lastChild);
+      }
+    }
+
+    // =====================================
+    // マップ初期化
+    // =====================================
+    function initMap() {
+      addStatus('マップを初期化中...', 'loading');
+      
+      map = L.map('map').setView([36.5, 137.5], 5);
+      
+      L.tileLayer('https://cyberjapandata.gsi.go.jp/xyz/pale/{z}/{x}/{y}.png', {
+        maxZoom: 18,
+        attribution: '&copy; <a href="https://maps.gsi.go.jp/">国土地理院</a>'
+      }).addTo(map);
+      
+      addStatus('マップ初期化完了', 'success');
+      loadRegionData('osaka'); // デフォルトで大阪を読み込み
+    }
+
+    // =====================================
+    // 地域切り替え
+    // =====================================
+    function switchRegion() {
+      const regionKey = document.getElementById('regionSelect').value;
+      currentRegion = regionKey;
+      loadRegionData(regionKey);
+    }
+
+    function loadRegionData(regionKey) {
+      const regionInfo = regionDataMap[regionKey];
+      
+      if (!regionInfo) {
+        addStatus('無効な地域: ' + regionKey, 'error');
+        return;
+      }
+
+      // 既存レイヤを削除
+      ['cadastral', 'flood', 'landslide', 'tsunami'].forEach(layer => {
+        if (layerCache[layer]) {
+          map.removeLayer(layerCache[layer]);
+          layerCache[layer] = null;
+        }
+      });
+
+      // マップをリセット
+      map.setView(regionInfo.center, regionInfo.zoom);
+      
+      addStatus(regionInfo.name + ' を読み込み中...', 'loading');
+
+      // 地籍データを読み込み
+      if (regionKey === 'osaka') {
+        fetch('../geojson/27128__6_r_2024.geojson')
+          .then(r => r.json())
+          .then(geojson => {
+            displayCadastralLayer(geojson);
+            
+            // ハザードデータを読み込み
+            loadHazardLayers();
+            
+            addStatus(regionInfo.name + ' を読み込みました', 'success');
+          })
+          .catch(err => {
+            console.error('Data load error:', err);
+            addStatus(regionInfo.name + ' の読み込みに失敗', 'error');
+          });
+      } else {
+        addStatus(regionInfo.name + ' はサンプルモード（大阪のデータを表示）', 'info');
+        // サンプルデータを再利用
+        if (cadastralGeojsonCache['osaka']) {
+          displayCadastralLayer(cadastralGeojsonCache['osaka']);
+        }
+      }
+    }
+
+    function displayCadastralLayer(geojson) {
+      cadastralGeojsonCache[currentRegion] = geojson;
+
+      const cadastralStyle = {
+        color: '#333',
+        weight: 1,
+        fillColor: '#ffcc00',
+        fillOpacity: 0.4
+      };
+
+      const cadastralLayer = L.geoJSON(geojson, {
+        style: cadastralStyle,
+        onEachFeature: (feature, layer) => {
+          const props = feature.properties || {};
+          let popupHtml = '<div style="font-size:12px; max-width:300px;"><strong>地籍</strong><br>';
+          if (props['大字']) popupHtml += '大字: ' + props['大字'] + '<br>';
+          if (props['町']) popupHtml += '町: ' + props['町'] + '<br>';
+          if (props['地番']) popupHtml += '<strong>地番: ' + props['地番'] + '</strong><br>';
+          if (props['住所']) popupHtml += '住所: ' + props['住所'] + '<br>';
+          if (props['精度']) popupHtml += '精度: ' + props['精度'] + '<br>';
+          
+          if (feature.geometry.type === 'Polygon') {
+            const coords = feature.geometry.coordinates[0][0];
+            popupHtml += '<a href="https://maps.google.com/?q=' + coords[1] + ',' + coords[0] + '" target="_blank">📍 Maps</a>';
+          }
+          popupHtml += '</div>';
+          
+          layer.bindPopup(popupHtml);
+          layer.on('mouseover', () => {
+            layer.setStyle({ fillColor: '#ff9800', fillOpacity: 0.6, weight: 2 });
+          });
+          layer.on('mouseout', () => {
+            layer.setStyle({ fillColor: '#ffcc00', fillOpacity: 0.4, weight: 1 });
+          });
+          layer.on('click', () => layer.openPopup());
+        }
+      });
+
+      cadastralLayer.addTo(map);
+      layerCache['cadastral'] = cadastralLayer;
+    }
+
+    // =====================================
+    // ハザードレイヤ読み込み
+    // =====================================
+    function loadHazardLayers() {
+      const hazardData = [
+        {
+          name: 'flood',
+          url: '../geojson/hazard_sample_flood_osaka.geojson',
+          label: '洪水',
+          style: { color: '#0b66ff', weight: 1, fillColor: '#0b66ff', fillOpacity: 0.3 }
+        },
+        {
+          name: 'landslide',
+          url: '../geojson/hazard_sample_landslide_osaka.geojson',
+          label: '土砂災害',
+          style: { color: '#ff8c00', weight: 1, fillColor: '#ff8c00', fillOpacity: 0.3 }
+        },
+        {
+          name: 'tsunami',
+          url: '../geojson/hazard_sample_tsunami_osaka.geojson',
+          label: '津波',
+          style: { color: '#00c8d8', weight: 1, fillColor: '#00c8d8', fillOpacity: 0.3 }
+        }
+      ];
+
+      hazardData.forEach(data => {
+        fetch(data.url)
+          .then(r => r.json())
+          .then(geojson => {
+            const layer = L.geoJSON(geojson, {
+              style: data.style,
+              onEachFeature: (feature, layer) => {
+                const props = feature.properties || {};
+                let popup = '<strong>' + data.label + '</strong><br>';
+                for (let key in props) {
+                  popup += key + ': ' + props[key] + '<br>';
+                }
+                layer.bindPopup(popup);
+              }
+            });
+
+            layer.addTo(map);
+            layerCache[data.name] = layer;
+            addStatus(data.label + ' 読み込み完了', 'success');
+          })
+          .catch(err => console.warn(data.label + ' read error:', err));
+      });
+    }
+
+    // =====================================
+    // レイヤ表示切り替え
+    // =====================================
+    function toggleLayer(layerName) {
+      const checkbox = document.getElementById('toggle-' + layerName);
+      if (layerCache[layerName]) {
+        if (checkbox.checked) {
+          map.addLayer(layerCache[layerName]);
+        } else {
+          map.removeLayer(layerCache[layerName]);
+        }
+      }
+    }
+
+    // =====================================
+    // 検索機能
+    // =====================================
+    function searchParcel() {
+      const query = document.getElementById('searchInput').value.trim();
+      if (!query) {
+        addStatus('検索語を入力', 'error');
+        return;
+      }
+
+      const geojson = cadastralGeojsonCache[currentRegion];
+      if (!geojson) {
+        addStatus('地籍データ未読み込み', 'error');
+        return;
+      }
+
+      const results = geojson.features.filter(f => {
+        const props = f.properties || {};
+        const str = JSON.stringify(props).toLowerCase();
+        return str.includes(query.toLowerCase());
+      });
+
+      if (results.length === 0) {
+        addStatus('検索結果なし', 'error');
+        return;
+      }
+
+      addStatus(results.length + ' 件ヒット', 'success');
+
+      // 最初の結果にズーム
+      const first = results[0];
+      const bounds = L.geoJSON(first).getBounds();
+      map.fitBounds(bounds.pad(0.1));
+    }
+
+    // =====================================
+    // 初期化
+    // =====================================
+    document.addEventListener('DOMContentLoaded', () => {
+      initMap();
+    });
+  </script>
+</body>
+</html>

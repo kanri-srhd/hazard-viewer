@@ -1,0 +1,651 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>全国ハザードマップビューア (PMTiles + MapLibre GL)</title>
+    
+    <!-- MapLibre GL CSS -->
+    <link href="https://unpkg.com/maplibre-gl@4.0.0/dist/maplibre-gl.css" rel="stylesheet" />
+    <!-- PMTiles -->
+    <script src="https://unpkg.com/pmtiles@3/dist/index.js"></script>
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', 'MS PGothic', sans-serif;
+            background: #f0f0f0;
+        }
+        
+        #map {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            width: 100%;
+            height: 100%;
+        }
+        
+        .sidebar {
+            position: absolute;
+            left: 10px;
+            top: 10px;
+            width: 350px;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+            padding: 15px;
+            max-height: 85vh;
+            overflow-y: auto;
+            z-index: 100;
+        }
+        
+        .sidebar h1 {
+            font-size: 16px;
+            margin-bottom: 12px;
+            color: #333;
+        }
+        
+        .search-box {
+            margin-bottom: 15px;
+        }
+        
+        .search-box input {
+            width: 100%;
+            padding: 8px 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        
+        .search-box button {
+            width: 100%;
+            padding: 8px;
+            margin-top: 5px;
+            background: #0b66ff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 13px;
+        }
+        
+        .search-box button:hover {
+            background: #0854cc;
+        }
+        
+        .status {
+            background: #f9f9f9;
+            border-left: 3px solid #0b66ff;
+            padding: 8px;
+            margin-bottom: 12px;
+            border-radius: 2px;
+            font-size: 12px;
+            color: #333;
+        }
+        
+        .status.success {
+            border-left-color: #22c55e;
+            background: #f0fdf4;
+        }
+        
+        .status.error {
+            border-left-color: #ef4444;
+            background: #fef2f2;
+        }
+        
+        .status.loading {
+            border-left-color: #f59e0b;
+            background: #fffbeb;
+        }
+        
+        .status.loading::after {
+            content: " ⏳";
+        }
+        
+        .layer-controls {
+            background: #f9f9f9;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            padding: 10px;
+            margin-bottom: 10px;
+        }
+        
+        .layer-controls h3 {
+            font-size: 13px;
+            margin-bottom: 8px;
+            color: #333;
+        }
+        
+        .layer-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 6px;
+            font-size: 12px;
+        }
+        
+        .layer-item input[type="checkbox"] {
+            margin-right: 6px;
+            cursor: pointer;
+        }
+        
+        .layer-item label {
+            cursor: pointer;
+            user-select: none;
+        }
+        
+        .info-box {
+            background: #f0f8ff;
+            border: 1px solid #90caf9;
+            border-radius: 4px;
+            padding: 8px;
+            margin-top: 10px;
+            font-size: 12px;
+            color: #333;
+            line-height: 1.4;
+        }
+        
+        .coord-display {
+            font-size: 11px;
+            color: #666;
+            margin-top: 8px;
+            font-family: 'Courier New', monospace;
+        }
+        
+        /* ローディングスピナー */
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        .spinner {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border: 2px solid #ddd;
+            border-top-color: #0b66ff;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            margin-right: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div id="map"></div>
+    
+    <div class="sidebar">
+        <h1>🗺️ 全国ハザードマップビューア</h1>
+        
+        <div id="statusPanel"></div>
+        
+        <div class="search-box">
+            <input type="text" id="searchInput" placeholder="地番 / 住所で検索...">
+            <button onclick="searchParcel()">🔍 検索</button>
+        </div>
+        
+        <div class="layer-controls">
+            <h3>📍 レイヤ表示</h3>
+            <div class="layer-item">
+                <input type="checkbox" id="toggle-cadastral" checked onchange="toggleLayer('cadastral')">
+                <label for="toggle-cadastral">地籍 (黄色)</label>
+            </div>
+            <div class="layer-item">
+                <input type="checkbox" id="toggle-flood" checked onchange="toggleLayer('flood')">
+                <label for="toggle-flood">洪水 (青色)</label>
+            </div>
+            <div class="layer-item">
+                <input type="checkbox" id="toggle-landslide" checked onchange="toggleLayer('landslide')">
+                <label for="toggle-landslide">土砂災害 (橙色)</label>
+            </div>
+            <div class="layer-item">
+                <input type="checkbox" id="toggle-tsunami" checked onchange="toggleLayer('tsunami')">
+                <label for="toggle-tsunami">津波 (水色)</label>
+            </div>
+        </div>
+        
+        <div class="info-box">
+            <strong>ℹ️ 使用方法</strong><br>
+            • 検索: 地番・住所で該当ポリゴンを検索<br>
+            • チェック: レイヤの表示/非表示を切り替え<br>
+            • クリック: ポップアップで詳細情報を表示<br>
+            • ズーム: マウスホイール or ピンチズーム
+        </div>
+        
+        <div id="coordDisplay" class="coord-display"></div>
+    </div>
+    
+    <!-- MapLibre GL JS -->
+    <script src="https://unpkg.com/maplibre-gl@4.0.0/dist/maplibre-gl.js"></script>
+    
+    <script>
+        // ==========================================
+        // グローバル変数
+        // ==========================================
+        let map;
+        let cadastralData = null;
+        let layersEnabled = {
+            cadastral: true,
+            flood: true,
+            landslide: true,
+            tsunami: true
+        };
+        let p; // PMTiles Protocol instance
+        
+        // ==========================================
+        // ステータスパネル管理
+        // ==========================================
+        function addStatus(msg, type = 'info') {
+            const panel = document.getElementById('statusPanel');
+            const div = document.createElement('div');
+            div.className = 'status ' + type;
+            div.textContent = msg;
+            panel.insertBefore(div, panel.firstChild);
+            
+            if (type !== 'loading') {
+                setTimeout(() => div.style.opacity = '0.7', 2000);
+            }
+        }
+        
+        // ==========================================
+        // マップ初期化
+        // ==========================================
+        function initMap() {
+            addStatus('マップを初期化中...', 'loading');
+            
+            // OSM ベースマップ
+            map = new maplibregl.Map({
+                container: 'map',
+                style: 'https://tile.openstreetmap.org/style.json',
+                center: [136.5, 35.5], // 日本中央（愛知県）
+                zoom: 5,
+                pitch: 0,
+                bearing: 0
+            });
+            
+            map.on('load', () => {
+                addStatus('マップ読み込み完了', 'success');
+                initPMTiles();
+                setupEventHandlers();
+            });
+            
+            map.on('error', (err) => {
+                console.error('Map error:', err);
+                addStatus('マップエラー: ' + err.error, 'error');
+            });
+        }
+        
+        // ==========================================
+        // PMTiles プロトコル初期化
+        // ==========================================
+        function initPMTiles() {
+            addStatus('PMTiles プロトコルを初期化中...', 'loading');
+            
+            try {
+                // PMTiles Protocol を登録
+                p = new pmtiles.Protocol();
+                maplibregl.addProtocol('pmtiles', p.tile);
+                
+                addStatus('PMTiles プロトコル登録成功', 'success');
+                
+                // レイヤをロード
+                loadPMTilesLayers();
+            } catch (err) {
+                console.error('PMTiles Protocol Error:', err);
+                addStatus('PMTiles プロトコル登録失敗: ' + err.message, 'error');
+                // フォールバック: GeoJSON を使用
+                loadGeoJSONFallback();
+            }
+        }
+        
+        // ==========================================
+        // PMTiles レイヤのロード（MapLibre GL ネイティブ）
+        // ==========================================
+        function loadPMTilesLayers() {
+            // 地籍 PMTiles
+            addStatus('地籍 PMTiles を読み込み中...', 'loading');
+            
+            // PMTiles URL スキーム（相対パス）
+            const cadastralUrl = 'pmtiles://' + new URL('./data/cadastral_national.pmtiles', window.location.href).href.split('://')[1];
+            
+            try {
+                // 地籍レイヤ（ポリゴン）
+                map.addSource('cadastral-source', {
+                    type: 'vector',
+                    url: cadastralUrl
+                });
+                
+                map.addLayer({
+                    id: 'cadastral-layer',
+                    type: 'fill',
+                    source: 'cadastral-source',
+                    'source-layer': 'cadastral',
+                    paint: {
+                        'fill-color': '#ffcc00',
+                        'fill-opacity': 0.4,
+                        'fill-outline-color': '#333'
+                    }
+                });
+                
+                map.addLayer({
+                    id: 'cadastral-outline',
+                    type: 'line',
+                    source: 'cadastral-source',
+                    'source-layer': 'cadastral',
+                    paint: {
+                        'line-color': '#333',
+                        'line-width': 1
+                    }
+                });
+                
+                addStatus('地籍レイヤ読み込み完了', 'success');
+                
+                // ハザード PMTiles をロード
+                loadHazardPMTiles();
+                
+            } catch (err) {
+                console.error('Cadastral layer error:', err);
+                addStatus('地籍レイヤ読み込み失敗: ' + err.message, 'error');
+            }
+        }
+        
+        // ==========================================
+        // ハザード PMTiles のロード
+        // ==========================================
+        function loadHazardPMTiles() {
+            const hazardUrl = 'pmtiles://' + new URL('./data/hazard_integrated_national.pmtiles', window.location.href).href.split('://')[1];
+            
+            // 洪水
+            try {
+                map.addSource('flood-source', {
+                    type: 'vector',
+                    url: hazardUrl
+                });
+                
+                map.addLayer({
+                    id: 'flood-layer',
+                    type: 'fill',
+                    source: 'flood-source',
+                    'source-layer': 'flood',
+                    paint: {
+                        'fill-color': '#0b66ff',
+                        'fill-opacity': 0.3
+                    }
+                });
+                
+                addStatus('洪水レイヤ読み込み完了', 'success');
+            } catch (err) {
+                console.warn('Flood layer error:', err);
+            }
+            
+            // 土砂災害
+            try {
+                map.addSource('landslide-source', {
+                    type: 'vector',
+                    url: hazardUrl
+                });
+                
+                map.addLayer({
+                    id: 'landslide-layer',
+                    type: 'fill',
+                    source: 'landslide-source',
+                    'source-layer': 'landslide',
+                    paint: {
+                        'fill-color': '#ff8c00',
+                        'fill-opacity': 0.3
+                    }
+                });
+                
+                addStatus('土砂災害レイヤ読み込み完了', 'success');
+            } catch (err) {
+                console.warn('Landslide layer error:', err);
+            }
+            
+            // 津波
+            try {
+                map.addSource('tsunami-source', {
+                    type: 'vector',
+                    url: hazardUrl
+                });
+                
+                map.addLayer({
+                    id: 'tsunami-layer',
+                    type: 'fill',
+                    source: 'tsunami-source',
+                    'source-layer': 'tsunami',
+                    paint: {
+                        'fill-color': '#00c8d8',
+                        'fill-opacity': 0.3
+                    }
+                });
+                
+                addStatus('津波レイヤ読み込み完了', 'success');
+            } catch (err) {
+                console.warn('Tsunami layer error:', err);
+            }
+        }
+        
+        // ==========================================
+        // GeoJSON フォールバック（PMTiles 未対応環境）
+        // ==========================================
+        function loadGeoJSONFallback() {
+            addStatus('GeoJSON フォールバックモードで実行', 'info');
+            
+            // 地籍 GeoJSON をロード
+            addStatus('地籍 GeoJSON を読み込み中...', 'loading');
+            fetch('../geojson/27128__6_r_2024.geojson')
+                .then(r => r.json())
+                .then(geojson => {
+                    cadastralData = geojson;
+                    
+                    map.addSource('cadastral-source', {
+                        type: 'geojson',
+                        data: geojson
+                    });
+                    
+                    map.addLayer({
+                        id: 'cadastral-layer',
+                        type: 'fill',
+                        source: 'cadastral-source',
+                        paint: {
+                            'fill-color': '#ffcc00',
+                            'fill-opacity': 0.4,
+                            'fill-outline-color': '#333'
+                        }
+                    });
+                    
+                    map.addLayer({
+                        id: 'cadastral-outline',
+                        type: 'line',
+                        source: 'cadastral-source',
+                        paint: {
+                            'line-color': '#333',
+                            'line-width': 1
+                        }
+                    });
+                    
+                    addStatus('地籍 GeoJSON 読み込み完了 (' + geojson.features.length + ' 件)', 'success');
+                    
+                    // ハザード GeoJSON をロード
+                    loadHazardGeoJSON();
+                })
+                .catch(err => {
+                    console.error('GeoJSON load error:', err);
+                    addStatus('GeoJSON 読み込みエラー', 'error');
+                });
+        }
+        
+        // ==========================================
+        // ハザード GeoJSON のロード（フォールバック）
+        // ==========================================
+        function loadHazardGeoJSON() {
+            // 洪水
+            fetch('../geojson/hazard_sample_flood_osaka.geojson')
+                .then(r => r.json())
+                .then(gj => {
+                    map.addSource('flood-source', { type: 'geojson', data: gj });
+                    map.addLayer({
+                        id: 'flood-layer',
+                        type: 'fill',
+                        source: 'flood-source',
+                        paint: { 'fill-color': '#0b66ff', 'fill-opacity': 0.3 }
+                    });
+                    addStatus('洪水レイヤ読み込み完了', 'success');
+                })
+                .catch(err => console.warn('Flood GeoJSON error:', err));
+            
+            // 土砂災害
+            fetch('../geojson/hazard_sample_landslide_osaka.geojson')
+                .then(r => r.json())
+                .then(gj => {
+                    map.addSource('landslide-source', { type: 'geojson', data: gj });
+                    map.addLayer({
+                        id: 'landslide-layer',
+                        type: 'fill',
+                        source: 'landslide-source',
+                        paint: { 'fill-color': '#ff8c00', 'fill-opacity': 0.3 }
+                    });
+                    addStatus('土砂災害レイヤ読み込み完了', 'success');
+                })
+                .catch(err => console.warn('Landslide GeoJSON error:', err));
+            
+            // 津波
+            fetch('../geojson/hazard_sample_tsunami_osaka.geojson')
+                .then(r => r.json())
+                .then(gj => {
+                    map.addSource('tsunami-source', { type: 'geojson', data: gj });
+                    map.addLayer({
+                        id: 'tsunami-layer',
+                        type: 'fill',
+                        source: 'tsunami-source',
+                        paint: { 'fill-color': '#00c8d8', 'fill-opacity': 0.3 }
+                    });
+                    addStatus('津波レイヤ読み込み完了', 'success');
+                })
+                .catch(err => console.warn('Tsunami GeoJSON error:', err));
+        }
+        
+        // ==========================================
+        // イベントハンドラ
+        // ==========================================
+        function setupEventHandlers() {
+            // ズーム・パン時に座標を更新
+            map.on('mousemove', (e) => {
+                const zoom = map.getZoom().toFixed(2);
+                const lat = e.lngLat.lat.toFixed(4);
+                const lng = e.lngLat.lng.toFixed(4);
+                document.getElementById('coordDisplay').textContent = 
+                    `🎯 Zoom: ${zoom} | Lat: ${lat} | Lng: ${lng}`;
+            });
+            
+            // クリックでポップアップ表示（PMTiles の場合、フィーチャをクエリ）
+            map.on('click', 'cadastral-layer', (e) => {
+                const features = map.querySourceFeatures('cadastral-source', {
+                    sourceLayer: 'cadastral'
+                });
+                if (features.length > 0) {
+                    const feature = features[0];
+                    const props = feature.properties || {};
+                    let popupHtml = '<div style="font-size:12px;"><strong>地籍</strong><br>';
+                    for (let key in props) {
+                        popupHtml += `<strong>${key}</strong>: ${props[key]}<br>`;
+                    }
+                    popupHtml += '</div>';
+                    
+                    new maplibregl.Popup()
+                        .setLngLat(e.lngLat)
+                        .setHTML(popupHtml)
+                        .addTo(map);
+                }
+            });
+            
+            map.on('click', 'flood-layer', (e) => {
+                new maplibregl.Popup()
+                    .setLngLat(e.lngLat)
+                    .setHTML('<strong>洪水リスクエリア</strong>')
+                    .addTo(map);
+            });
+        }
+        
+        // ==========================================
+        // レイヤ表示切り替え
+        // ==========================================
+        function toggleLayer(layerName) {
+            const checkbox = document.getElementById('toggle-' + layerName);
+            layersEnabled[layerName] = checkbox.checked;
+            
+            const layerId = layerName + '-layer';
+            const visibility = checkbox.checked ? 'visible' : 'none';
+            
+            if (map.getLayer(layerId)) {
+                map.setLayoutProperty(layerId, 'visibility', visibility);
+                
+                // アウトラインレイヤも切り替え（存在する場合）
+                const outlineId = layerName + '-outline';
+                if (map.getLayer(outlineId)) {
+                    map.setLayoutProperty(outlineId, 'visibility', visibility);
+                }
+            }
+        }
+        
+        // ==========================================
+        // 検索機能
+        // ==========================================
+        function searchParcel() {
+            if (!cadastralData) {
+                addStatus('地籍データがまだ読み込まれていません', 'error');
+                return;
+            }
+            
+            const query = document.getElementById('searchInput').value.trim();
+            if (!query) {
+                addStatus('検索語を入力してください', 'info');
+                return;
+            }
+            
+            const results = cadastralData.features.filter(f => {
+                const props = f.properties || {};
+                const str = JSON.stringify(props).toLowerCase();
+                return str.includes(query.toLowerCase());
+            });
+            
+            if (results.length === 0) {
+                addStatus('検索結果なし', 'error');
+                return;
+            }
+            
+            // 最初の結果にズーム
+            const first = results[0];
+            if (first.geometry.type === 'Polygon') {
+                const coords = first.geometry.coordinates[0];
+                const bounds = coords.reduce((acc, c) => {
+                    return {
+                        minLng: Math.min(acc.minLng, c[0]),
+                        maxLng: Math.max(acc.maxLng, c[0]),
+                        minLat: Math.min(acc.minLat, c[1]),
+                        maxLat: Math.max(acc.maxLat, c[1])
+                    };
+                }, { minLng: Infinity, maxLng: -Infinity, minLat: Infinity, maxLat: -Infinity });
+                
+                map.fitBounds([
+                    [bounds.minLng, bounds.minLat],
+                    [bounds.maxLng, bounds.maxLat]
+                ], { padding: 40 });
+                
+                addStatus(results.length + ' 件の検索結果', 'success');
+            }
+        }
+        
+        // ==========================================
+        // 初期化
+        // ==========================================
+        document.addEventListener('DOMContentLoaded', () => {
+            initMap();
+        });
+    </script>
+</body>
+</html>
