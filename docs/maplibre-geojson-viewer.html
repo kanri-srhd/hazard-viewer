@@ -168,8 +168,9 @@
         <div id="statusPanel" style="max-height: 100px; overflow-y: auto;"></div>
         
         <div class="search-box">
-            <input type="text" id="searchInput" placeholder="地番 / 住所で検索...">
+            <input type="text" id="searchInput" placeholder="地番 / 住所 / GoogleMapURL で検索...">
             <button onclick="searchParcel()">🔍 検索</button>
+            <button onclick="openChibanSearch()" style="margin-top:5px;background:#ff6b6b;width:100%;">🏛️ 地番検索を開く</button>
         </div>
         
         <div class="layer-controls">
@@ -181,14 +182,17 @@
             <div class="layer-item">
                 <input type="checkbox" id="toggle-flood" checked onchange="toggleLayer('flood')">
                 <label for="toggle-flood">洪水 (青色)</label>
+                <button onclick="exportPDF('flood', '01_洪水ハザード')" style="margin-left:auto;padding:4px 8px;font-size:11px;background:#0b66ff;color:white;border:none;border-radius:3px;cursor:pointer;">PDF</button>
             </div>
             <div class="layer-item">
                 <input type="checkbox" id="toggle-landslide" checked onchange="toggleLayer('landslide')">
                 <label for="toggle-landslide">土砂災害 (橙色)</label>
+                <button onclick="exportPDF('landslide', '02_土砂災害')" style="margin-left:auto;padding:4px 8px;font-size:11px;background:#ff8c00;color:white;border:none;border-radius:3px;cursor:pointer;">PDF</button>
             </div>
             <div class="layer-item">
                 <input type="checkbox" id="toggle-tsunami" checked onchange="toggleLayer('tsunami')">
                 <label for="toggle-tsunami">津波 (水色)</label>
+                <button onclick="exportPDF('tsunami', '04_津波ハザード')" style="margin-left:auto;padding:4px 8px;font-size:11px;background:#00c8d8;color:white;border:none;border-radius:3px;cursor:pointer;">PDF</button>
             </div>
         </div>
         
@@ -197,6 +201,27 @@
             • 検索で該当ポリゴンを検索<br>
             • チェックでレイヤ切り替え<br>
             • クリックで詳細情報表示
+            <div style="margin-top:8px;">
+                <button id="toggleGuideBtn" onclick="toggleGuide()" style="padding:6px 12px;background:#4CAF50;color:white;border:none;border-radius:4px;cursor:pointer;font-size:12px;width:100%;">📋 出力ガイドを表示</button>
+            </div>
+        </div>
+        
+        <div id="guidePanel" style="display:none;background:#fffacd;border:1px solid #f0ad4e;border-radius:4px;padding:10px;margin-top:10px;font-size:12px;color:#333;line-height:1.6;">
+            <strong>📝 PDF出力手順</strong><br><br>
+            <strong>1️⃣ 地番確認</strong><br>
+            「🏛️ 地番検索を開く」 → 法務省サービスで地番確認 → Ctrl+P で PDF保存<br>
+            ファイル名: <code>11_地番_[都道府県市区町村字地番].pdf</code><br><br>
+            <strong>2️⃣ ハザード確認</strong><br>
+            各ハザードの 【PDF】 ボタン → 地図が PDF化されます<br>
+            • 01_洪水ハザード_....pdf<br>
+            • 02_土砂災害_....pdf<br>
+            • 04_津波ハザード_....pdf<br>
+            • 05_液状化ハザード_....pdf<br><br>
+            <strong>3️⃣ ファイル管理</strong><br>
+            すべてのPDFを Google Drive の候補地フォルダへ保存 → スプレッドシートに URL を記載<br><br>
+            <strong>⚠️ 注意</strong><br>
+            • 未提供エリアは「法務局窓口で確認」と明記<br>
+            • 出典表示（国土交通省等）を PDF内に記載
         </div>
         <div id="detailPanel" class="detail-panel">
             <strong>詳細情報</strong>
@@ -206,6 +231,10 @@
     
     <!-- MapLibre GL JS -->
     <script src="https://unpkg.com/maplibre-gl@4.0.0/dist/maplibre-gl.js"></script>
+    
+    <!-- html2canvas & jsPDF for PDF export -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     
     <script>
         // ==========================================
@@ -484,18 +513,133 @@
         }
         
         // ==========================================
-        // 検索機能
+        // GoogleMap URL パース関数
+        // ==========================================
+        function parseGoogleMapURL(input) {
+            // GoogleMap URL パターン: https://www.google.com/maps/search/.../@lat,lng,zoom
+            const urlPattern = /@(-?\d+\.?\d*),(-?\d+\.?\d*)/;
+            const match = input.match(urlPattern);
+            if (match) {
+                return { lat: parseFloat(match[1]), lng: parseFloat(match[2]) };
+            }
+            
+            // 座標パターン: "lat,lng" または "lat lng"
+            const coordPattern = /(-?\d+\.?\d*)[,\s]+(-?\d+\.?\d*)/;
+            const coordMatch = input.match(coordPattern);
+            if (coordMatch) {
+                return { lat: parseFloat(coordMatch[1]), lng: parseFloat(coordMatch[2]) };
+            }
+            
+            return null;
+        }
+        
+        // ==========================================
+        // 地番検索を開く（法務省サービスへのリンクアウト）
+        // ==========================================
+        function openChibanSearch() {
+            const url = 'https://www1.touki.or.jp/';
+            window.open(url, '_blank');
+            addStatus('法務省地番検索サービスを新規タブで開きました。', 'info');
+            addStatus('📝 ガイド: ログイン後、結果画面で Ctrl+P (Cmd+P) → PDF保存してください。', 'info');
+        }
+        
+        // ==========================================
+        // PDF出力関数（html2canvas + jsPDF）
+        // ==========================================
+        async function exportPDF(hazardType, pdfFileName) {
+            addStatus('📄 PDF生成中...', 'loading');
+            
+            try {
+                // マップコンテナをキャプチャ
+                const mapElement = document.getElementById('map');
+                const canvas = await html2canvas(mapElement, {
+                    backgroundColor: '#ffffff',
+                    scale: 2
+                });
+                
+                // PDF化
+                const imgData = canvas.toDataURL('image/png');
+                // jsPDF の UMD エクスポートには変種があるため安全に検出する
+                let pdf;
+                const opts = { orientation: 'landscape', unit: 'mm', format: 'a4' };
+                if (window.jspdf && window.jspdf.jsPDF) {
+                    pdf = new window.jspdf.jsPDF(opts);
+                } else if (typeof window.jsPDF === 'function') {
+                    // 一部バンドルは直接コンストラクタを window.jsPDF に割り当てる
+                    pdf = new window.jsPDF(opts);
+                } else if (window.jsPDF && window.jsPDF.jsPDF) {
+                    pdf = new window.jsPDF.jsPDF(opts);
+                } else {
+                    throw new Error('jsPDF が利用できません。ライブラリ読み込みを確認してください。');
+                }
+                
+                // 画像を PDF に追加
+                const imgWidth = 297; // A4 横幅
+                const imgHeight = (canvas.height * imgWidth) / canvas.width;
+                pdf.addImage(imgData, 'PNG', 0, 0, imgWidth, imgHeight);
+                
+                // 出典と注記を追加
+                pdf.setFontSize(8);
+                pdf.text('出典: 国土交通省 重ねるハザード地図', 10, 210);
+                pdf.text('※ 未提供エリアは法務局窓口で確認してください', 10, 215);
+                
+                // ファイル名生成（現在の地番情報を追加）
+                const timestamp = new Date().toISOString().replace(/[:.]/g, '-').substring(0, 19);
+                const filename = `${pdfFileName}_${timestamp}.pdf`;
+                
+                // ダウンロード
+                pdf.save(filename);
+                addStatus(`✅ PDF保存完了: ${filename}`, 'success');
+                
+            } catch (err) {
+                console.error('PDF export error:', err);
+                addStatus('❌ PDF生成エラー: ' + err.message, 'error');
+            }
+        }
+        
+        // ==========================================
+        // 出力ガイド表示トグル
+        // ==========================================
+        function toggleGuide() {
+            const guidePanel = document.getElementById('guidePanel');
+            const btn = document.getElementById('toggleGuideBtn');
+            if (guidePanel.style.display === 'none') {
+                guidePanel.style.display = 'block';
+                btn.textContent = '📋 出力ガイドを非表示';
+            } else {
+                guidePanel.style.display = 'none';
+                btn.textContent = '📋 出力ガイドを表示';
+            }
+        }
+        
+        // ==========================================
+        // 検索機能（GoogleMapURL・座標パース対応）
         // ==========================================
         function searchParcel() {
-            const query = document.getElementById('searchInput').value.trim().toLowerCase();
-            if (!query || !cadastralData) {
+            const query = document.getElementById('searchInput').value.trim();
+            if (!query) {
                 addStatus('検索語を入力してください', 'error');
                 return;
             }
             
+            // GoogleMapURL または座標のパース試行
+            const coords = parseGoogleMapURL(query);
+            if (coords) {
+                map.flyTo({ center: [coords.lng, coords.lat], zoom: 14 });
+                addStatus(`📍 座標: ${coords.lat.toFixed(4)}, ${coords.lng.toFixed(4)} へ移動`, 'success');
+                return;
+            }
+            
+            // 通常の地番・住所検索
+            if (!cadastralData) {
+                addStatus('地籍データがまだ読み込まれていません', 'error');
+                return;
+            }
+            
+            const queryLower = query.toLowerCase();
             const results = cadastralData.features.filter(f => {
                 const props = f.properties || {};
-                return JSON.stringify(props).toLowerCase().includes(query);
+                return JSON.stringify(props).toLowerCase().includes(queryLower);
             });
             
             if (results.length === 0) {
