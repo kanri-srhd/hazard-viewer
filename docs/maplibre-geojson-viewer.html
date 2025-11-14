@@ -166,6 +166,10 @@
         <h1>🗺️ MapLibre GL版 ハザードマップビューア</h1>
         
         <div id="statusPanel" style="max-height: 100px; overflow-y: auto;"></div>
+        <div id="diagPanel" style="margin-top:8px;padding:8px;background:#fff;border:1px solid #eee;border-radius:4px;font-size:12px;">
+            <strong>診断パネル</strong>
+            <div id="diagContent" style="margin-top:6px;color:#333;">ライブラリ読み込み状況をここに表示します。</div>
+        </div>
         
         <div class="search-box">
             <input type="text" id="searchInput" placeholder="地番 / 住所 / GoogleMapURL で検索...">
@@ -611,6 +615,34 @@
                 btn.textContent = '📋 出力ガイドを表示';
             }
         }
+
+        // ==========================================
+        // ライブラリ診断: html2canvas / jsPDF の有無をチェック
+        // ==========================================
+        function checkLibraries() {
+            const diag = document.getElementById('diagContent');
+            const hasHtml2 = typeof window.html2canvas === 'function' || typeof window.html2canvas === 'object' || !!window.html2canvas;
+            const hasJSPDF = !!( (window.jspdf && window.jspdf.jsPDF) || (typeof window.jsPDF === 'function') || (window.jsPDF && window.jsPDF.jsPDF) );
+            let html = '';
+            html += `<div>html2canvas: <strong style="color:${hasHtml2?"#0b6623":"#d64444"}">${hasHtml2?"読み込み済み":"未読み込み"}</strong></div>`;
+            html += `<div>jsPDF: <strong style="color:${hasJSPDF?"#0b6623":"#d64444"}">${hasJSPDF?"読み込み済み":"未読み込み"}</strong></div>`;
+            diag.innerHTML = html;
+
+            // 無ければ PDF ボタンを無効化
+            const pdfButtons = document.querySelectorAll('button[onclick^="exportPDF("]');
+            pdfButtons.forEach(b => {
+                if (!hasHtml2 || !hasJSPDF) {
+                    b.disabled = true;
+                    b.style.opacity = '0.5';
+                    b.title = 'PDF ライブラリが未読み込みのため無効です。ページを再読み込みしてください。';
+                } else {
+                    b.disabled = false;
+                    b.style.opacity = '';
+                    b.title = '';
+                }
+            });
+            return { hasHtml2, hasJSPDF };
+        }
         
         // ==========================================
         // 検索機能（GoogleMapURL・座標パース対応）
@@ -669,6 +701,8 @@
         // ==========================================
         document.addEventListener('DOMContentLoaded', () => {
             initMap();
+            // 初回ライブラリ診断（早めに表示）
+            setTimeout(checkLibraries, 300);
         });
     </script>
 </body>
