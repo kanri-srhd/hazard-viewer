@@ -181,7 +181,8 @@
             <h3>📍 レイヤ表示</h3>
             <div class="layer-item">
                 <input type="checkbox" id="toggle-cadastral" checked onchange="toggleLayer('cadastral')">
-                <label for="toggle-cadastral">地籍 (黄色)</label>
+                <label for="toggle-cadastral">地番 (黄色)</label>
+                <button onclick="exportPDF('cadastral', '11_地番')" style="margin-left:auto;padding:4px 8px;font-size:11px;background:#ffcc00;color:#333;border:none;border-radius:3px;cursor:pointer;">PDF</button>
             </div>
             <div class="layer-item">
                 <input type="checkbox" id="toggle-flood" checked onchange="toggleLayer('flood')">
@@ -313,7 +314,7 @@
         // GeoJSON データ読み込み
         // ==========================================
         function loadGeoJSONData() {
-            addStatus('地籍データ読み込み中...', 'loading');
+            addStatus('地番データ読み込み中...', 'loading');
             
             fetch('../geojson/27128__6_r_2024.geojson')
                 .then(r => r.json())
@@ -374,12 +375,12 @@
                         showDetail(props, e.lngLat);
                     });
                     
-                    addStatus('地籍データ読み込み完了 (' + geojson.features.length + ' 件)', 'success');
+                    addStatus('地番データ読み込み完了 (' + geojson.features.length + ' 件)', 'success');
                     loadHazardData();
                 })
                 .catch(err => {
                     console.error('Cadastral load error:', err);
-                    addStatus('地籍データ読み込み失敗', 'error');
+                    addStatus('地番データ読み込み失敗', 'error');
                 });
         }
         
@@ -478,6 +479,9 @@
         function showDetail(props, lngLat) {
             const el = document.getElementById('detailContent');
             if (!el) return;
+            
+            // 最後に選択した地番情報を記録（PDF ファイル名用）
+            window.lastSelectedFeature = { properties: props };
             let html = '<div style="font-size:13px;">';
             if (props.name) html += `<div style="font-weight:600;margin-bottom:6px">${props.name}</div>`;
             if (props.hazard_type) html += `<div><strong>タイプ:</strong> ${props.hazard_type}</div>`;
@@ -550,6 +554,80 @@
             addStatus('法務省地番検索サービスを新規タブで開きました。', 'info');
             addStatus('📝 ガイド: ログイン後、結果画面で Ctrl+P (Cmd+P) → PDF保存してください。', 'info');
         }
+
+        // ==========================================
+        // 現在の住所・地番を取得（PDF ファイル名用）
+        // ==========================================
+        function getCurrentAddress() {
+            // 最後にクリック/詳細表示した地番情報があればそれを使用
+            if (window.lastSelectedFeature && window.lastSelectedFeature.properties) {
+                const props = window.lastSelectedFeature.properties;
+                return extractAddressFromProperties(props);
+            }
+            
+            // 地番データがあれば現在のマップ中央に最も近い地番を使用
+            if (cadastralData && cadastralData.features && cadastralData.features.length > 0) {
+                const center = map.getCenter();
+                let nearestFeature = null;
+                let minDistance = Infinity;
+                
+                for (const feature of cadastralData.features) {
+                    if (feature.geometry && feature.geometry.coordinates) {
+                        // ポリゴンの中心を計算
+                        const coords = feature.geometry.coordinates[0];
+                        let sumLng = 0, sumLat = 0;
+                        for (const coord of coords) {
+                            sumLng += coord[0];
+                            sumLat += coord[1];
+                        }
+                        const centerLng = sumLng / coords.length;
+                        const centerLat = sumLat / coords.length;
+                        
+                        // 距離を計算
+                        const distance = Math.sqrt(
+                            Math.pow(center.lng - centerLng, 2) + Math.pow(center.lat - centerLat, 2)
+                        );
+                        
+                        if (distance < minDistance) {
+                            minDistance = distance;
+                            nearestFeature = feature;
+                        }
+                    }
+                }
+                
+                if (nearestFeature) {
+                    return extractAddressFromProperties(nearestFeature.properties);
+                }
+            }
+            
+            // デフォルト（住所が特定できない場合）
+            return '住所未特定';
+        }
+        
+        // プロパティから住所・地番を抽出
+        function extractAddressFromProperties(props) {
+            if (!props) return '住所未特定';
+            
+            // 一般的な住所関連プロパティ名を試行
+            const addressFields = ['住所', '所在', 'address', '大字', '字', '地番', '筆界', '所在地'];
+            
+            for (const field of addressFields) {
+                if (props[field] && typeof props[field] === 'string') {
+                    return props[field].replace(/[\\/:*?"<>|]/g, '').substring(0, 50); // ファイル名に使用不可文字を除去
+                }
+            }
+            
+            // プロパティの値を結合して住所らしいものを構築
+            const values = Object.values(props).filter(v => 
+                typeof v === 'string' && v.length > 2 && v.length < 100
+            );
+            
+            if (values.length > 0) {
+                return values.join('').replace(/[\\/:*?"<>|]/g, '').substring(0, 50);
+            }
+            
+            return '住所未特定';
+        }
         
         // ==========================================
         // PDF出力関数（html2canvas + jsPDF）
@@ -618,9 +696,9 @@
                 pdf.text('Source: MLIT Hazard Map / Map: (C) OpenStreetMap contributors', 10, 210);
                 pdf.text('Note: Check unavailable areas at Legal Affairs Bureau', 10, 215);
 
-                // ファイル名生成（現在の地番情報を追加）
-                const timestamp = new Date().toISOString().replace(/[:.]/g, '-').substring(0, 19);
-                const filename = `${pdfFileName}_${timestamp}.pdf`;
+                // ファイル名生成（正しい命名規則：[番号]_[種別]_[住所地番].pdf）
+                const address = getCurrentAddress();
+                const filename = `${pdfFileName}_${address}.pdf`;
 
                 // ダウンロード
                 pdf.save(filename);
@@ -695,7 +773,7 @@
             
             // 通常の地番・住所検索
             if (!cadastralData) {
-                addStatus('地籍データがまだ読み込まれていません', 'error');
+                addStatus('地番データがまだ読み込まれていません', 'error');
                 return;
             }
             
