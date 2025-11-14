@@ -239,6 +239,9 @@
     <!-- html2canvas & jsPDF for PDF export -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <!-- jsPDF with Japanese font support -->
+    <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jspdf-autotable@3.5.31/dist/jspdf.plugin.autotable.min.js"></script>
     
     <script>
         // ==========================================
@@ -282,7 +285,8 @@
                 container: 'map',
                 style: style,
                 center: [135.5, 34.69],
-                zoom: 6
+                zoom: 6,
+                preserveDrawingBuffer: true
             });
             
             map.on('load', () => {
@@ -552,49 +556,76 @@
         // ==========================================
         async function exportPDF(hazardType, pdfFileName) {
             addStatus('📄 PDF生成中...', 'loading');
-            
+
             try {
-                // マップコンテナをキャプチャ
+                // MapLibre WebGL キャンバスを直接取得
+                const mapCanvasEl = map.getCanvas();
+                
+                // マップキャンバスのサイズを取得
+                const mapWidth = mapCanvasEl.width;
+                const mapHeight = mapCanvasEl.height;
+                
+                // 合成用キャンバスを作成
+                const combined = document.createElement('canvas');
+                combined.width = mapWidth;
+                combined.height = mapHeight;
+                const ctx = combined.getContext('2d');
+                
+                // 1) マップキャンバスを描画（地図タイル）
+                ctx.drawImage(mapCanvasEl, 0, 0);
+                
+                // 2) HTML オーバーレイ（ポップアップ等）を上に重ねる
+                // マップキャンバスを一時的に透明にして html2canvas でオーバーレイだけキャプチャ
+                const originalOpacity = mapCanvasEl.style.opacity;
+                mapCanvasEl.style.opacity = '0';
+                
                 const mapElement = document.getElementById('map');
-                const canvas = await html2canvas(mapElement, {
-                    backgroundColor: '#ffffff',
-                    scale: 2
+                const overlayCanvas = await html2canvas(mapElement, {
+                    backgroundColor: null,
+                    scale: mapWidth / mapElement.offsetWidth,
+                    useCORS: true,
+                    logging: false
                 });
                 
-                // PDF化
-                const imgData = canvas.toDataURL('image/png');
+                // 透明度を戻す
+                mapCanvasEl.style.opacity = originalOpacity;
+                
+                // オーバーレイを合成キャンバスに重ねる
+                ctx.drawImage(overlayCanvas, 0, 0, mapWidth, mapHeight);
+                
+                // 合成画像を PDF に入れる
+                const imgData = combined.toDataURL('image/png');
+
                 // jsPDF の UMD エクスポートには変種があるため安全に検出する
                 let pdf;
                 const opts = { orientation: 'landscape', unit: 'mm', format: 'a4' };
                 if (window.jspdf && window.jspdf.jsPDF) {
                     pdf = new window.jspdf.jsPDF(opts);
                 } else if (typeof window.jsPDF === 'function') {
-                    // 一部バンドルは直接コンストラクタを window.jsPDF に割り当てる
                     pdf = new window.jsPDF(opts);
                 } else if (window.jsPDF && window.jsPDF.jsPDF) {
                     pdf = new window.jsPDF.jsPDF(opts);
                 } else {
                     throw new Error('jsPDF が利用できません。ライブラリ読み込みを確認してください。');
                 }
-                
-                // 画像を PDF に追加
-                const imgWidth = 297; // A4 横幅
-                const imgHeight = (canvas.height * imgWidth) / canvas.width;
+
+                const imgWidth = 297; // A4 横幅 (mm)
+                const imgHeight = (combined.height * imgWidth) / combined.width;
                 pdf.addImage(imgData, 'PNG', 0, 0, imgWidth, imgHeight);
-                
-                // 出典と注記を追加
+
+                // 出典と注記を追加（英語表記: jsPDF の日本語フォント制限のため）
                 pdf.setFontSize(8);
-                pdf.text('出典: 国土交通省 重ねるハザード地図', 10, 210);
-                pdf.text('※ 未提供エリアは法務局窓口で確認してください', 10, 215);
-                
+                pdf.text('Source: MLIT Hazard Map / Map: (C) OpenStreetMap contributors', 10, 210);
+                pdf.text('Note: Check unavailable areas at Legal Affairs Bureau', 10, 215);
+
                 // ファイル名生成（現在の地番情報を追加）
                 const timestamp = new Date().toISOString().replace(/[:.]/g, '-').substring(0, 19);
                 const filename = `${pdfFileName}_${timestamp}.pdf`;
-                
+
                 // ダウンロード
                 pdf.save(filename);
                 addStatus(`✅ PDF保存完了: ${filename}`, 'success');
-                
+
             } catch (err) {
                 console.error('PDF export error:', err);
                 addStatus('❌ PDF生成エラー: ' + err.message, 'error');
