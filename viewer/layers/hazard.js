@@ -92,17 +92,22 @@ export function hazardTypeToggle(type, show) {
 // 全ON/OFF（UI:「ハザード」チェックボックス用）
 // ------------------------------------------------------
 export function toggleLayer(show) {
-    isVisible = show;
     mapInstance = window.map;
 
     console.log("[hazard] toggle all:", show);
 
-    // 初回のみレイヤー作成（必ず先に実行）
+    // ★ map が load 済みでなければ何もしない
+    if (!mapInstance || !mapInstance.isStyleLoaded()) {
+        mapInstance.once("styledata", () => toggleLayer(show));
+        return;
+    }
+
+    // ★ 初回：必ずレイヤーを登録する
     if (!layersAdded) {
         addHazardLayers();
     }
 
-    // 全ハザード一括ON/OFF
+    // ★ visibility設定
     for (const type of Object.keys(hazardTiles)) {
         hazardTypeToggle(type, show);
     }
