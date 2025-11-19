@@ -42,3 +42,8 @@ tiles/
 # Allow test-phase GeoJSON/PMTiles inside `geojson/` directory
 !geojson/*.geojson
 !geojson/*.pmtiles
+
+# Allow capacity json for viewer
+!data/capacity/*.json
+!data/capacity/history/**
+!data/capacity/deltas/**
