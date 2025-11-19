@@ -39,6 +39,12 @@ const map = new maplibregl.Map({
 
 window.map = map;  // グローバルアクセス用
 
+// 縮尺コントロール追加
+map.addControl(new maplibregl.ScaleControl({
+    maxWidth: 200,
+    unit: "metric"
+}), 'bottom-left');
+
 // ======================================================
 //  レイヤーローダー
 // ======================================================
