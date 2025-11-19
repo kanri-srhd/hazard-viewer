@@ -65,8 +65,10 @@ function addHazardLayers() {
             }
         });
 
-        // ★ GSIより前面に出す（これを入れないと見えない）
-        mapInstance.moveLayer(spec.id);
+        // ★ 全レイヤーの一番上に移動（最強の可視化）
+        const allLayers = mapInstance.getStyle().layers;
+        const topLayerId = allLayers[allLayers.length - 1].id;
+        mapInstance.moveLayer(spec.id, topLayerId);
     }
 
     layersAdded = true;
