@@ -71,10 +71,22 @@ async function loadViewerLayers() {
 
     // UI パネルを生成
     uiController.createLayerToggleUI({
-        hazard: { label: "ハザード", toggle: hazardLayer.toggleLayer },
-        jiban: { label: "地番", toggle: jibanLayer.toggleLayer },
-        grid: { label: "送電網", toggle: gridLayer.toggleLayer },
-        capacity: { label: "空き容量", toggle: capacityLayer.toggleLayer }
+        hazard: { 
+            label: "ハザード",
+            toggle: (checked) => hazardLayer.toggleLayer(checked)
+        },
+        jiban: { 
+            label: "地番",
+            toggle: (checked) => jibanLayer.toggleLayer(checked)
+        },
+        grid: { 
+            label: "送電網",
+            toggle: (checked) => gridLayer.toggleLayer(checked)
+        },
+        capacity: { 
+            label: "空き容量",
+            toggle: (checked) => capacityLayer.toggleLayer(checked)
+        }
     });
 }
 
