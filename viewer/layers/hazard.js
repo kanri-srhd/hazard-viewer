@@ -64,6 +64,9 @@ function addHazardLayers() {
                 "raster-opacity": 0.75    // 公式色を活かしつつ透過
             }
         });
+
+        // ★ GSIより前面に出す（これを入れないと見えない）
+        mapInstance.moveLayer(spec.id);
     }
 
     layersAdded = true;
