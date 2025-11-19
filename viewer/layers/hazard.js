@@ -61,14 +61,9 @@ function addHazardLayers() {
             source: spec.id,
             layout: { visibility: "none" },
             paint: {
-                "raster-opacity": 0.75    // 公式色を活かしつつ透過
+                "raster-opacity": 0.75
             }
-        });
-
-        // ★ 全レイヤーの一番上に移動（最強の可視化）
-        const allLayers = mapInstance.getStyle().layers;
-        const topLayerId = allLayers[allLayers.length - 1].id;
-        mapInstance.moveLayer(spec.id, topLayerId);
+        }, "gsi-layer");   // ★ gsi-layer の "上" に置く
     }
 
     layersAdded = true;
