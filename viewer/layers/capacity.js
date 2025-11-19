@@ -17,8 +17,8 @@ let styleData = null;
 // JSONとstyleをロード
 // --------------------------------------------
 async function loadCapacityData() {
-    const dataUrl = "/data/capacity/nationwide_v1.json";
-    const styleUrl = "/data/capacity/style_v1.json";
+    const dataUrl = "../data/capacity/nationwide_v1.json";
+    const styleUrl = "../data/capacity/style_v1.json";
 
     const data = await fetch(dataUrl).then(r => r.json());
     styleData = await fetch(styleUrl).then(r => r.json());
