@@ -13,19 +13,19 @@ let layersAdded = false;  // タイルレイヤー追加済みかどうか
 const hazardTiles = {
     flood: {
         id: "hazard-flood",
-        url: "https://disaportaldata.gsi.go.jp/raster/01/flood_l2_shinsuishin/{z}/{x}/{y}.png"
+        url: "https://disaportaldata.gsi.go.jp/data/raster/01/flood_l2_shinsuishin/{z}/{x}/{y}.png"
     },
     landslide: {
         id: "hazard-landslide",
-        url: "https://disaportaldata.gsi.go.jp/raster/03/doseki_keikaikuiki/{z}/{x}/{y}.png"
+        url: "https://disaportaldata.gsi.go.jp/data/raster/03/doseki_keikaikuiki/{z}/{x}/{y}.png"
     },
     tsunami: {
         id: "hazard-tsunami",
-        url: "https://disaportaldata.gsi.go.jp/raster/05/tsunami_shinsui/{z}/{x}/{y}.png"
+        url: "https://disaportaldata.gsi.go.jp/data/raster/05/tsunami_shinsui/{z}/{x}/{y}.png"
     },
     liquefaction: {
         id: "hazard-liquefaction",
-        url: "https://disaportaldata.gsi.go.jp/raster/06/ekijoka/{z}/{x}/{y}.png"
+        url: "https://disaportaldata.gsi.go.jp/data/raster/06/ekijoka/{z}/{x}/{y}.png"
     }
 };
 
