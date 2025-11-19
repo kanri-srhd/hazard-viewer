@@ -94,21 +94,21 @@ export function hazardTypeToggle(type, show) {
 export function toggleLayer(show) {
     mapInstance = window.map;
 
+    const applyToggle = () => {
+        if (!layersAdded) {
+            addHazardLayers();
+        }
+        for (const type of Object.keys(hazardTiles)) {
+            hazardTypeToggle(type, show);
+        }
+    };
+
+    // ★ style が未ロードなら待つ
+    if (!mapInstance.isStyleLoaded()) {
+        mapInstance.once("styledata", applyToggle);
+    } else {
+        applyToggle();
+    }
+
     console.log("[hazard] toggle all:", show);
-
-    // ★ map が load 済みでなければ何もしない
-    if (!mapInstance || !mapInstance.isStyleLoaded()) {
-        mapInstance.once("styledata", () => toggleLayer(show));
-        return;
-    }
-
-    // ★ 初回：必ずレイヤーを登録する
-    if (!layersAdded) {
-        addHazardLayers();
-    }
-
-    // ★ visibility設定
-    for (const type of Object.keys(hazardTiles)) {
-        hazardTypeToggle(type, show);
-    }
 }
