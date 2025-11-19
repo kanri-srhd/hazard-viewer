@@ -3,6 +3,5 @@ let visible = false;
 export function toggleLayer(show) {
     visible = show;
     console.log("[grid] toggle:", visible);
-
-    // TODO: 送電網レイヤーの実装を後で追加
+    // まだ未実装のため、データ読み込みは行わない
 }

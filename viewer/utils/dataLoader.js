@@ -31,7 +31,17 @@ export async function loadData(sourceSpec) {
         // -------------------------------
         case "json":
         case "geojson":
-            return await fetch(sourceSpec.url).then(r => r.json());
+            const res = await fetch(sourceSpec.url);
+            if (!res.ok) {
+                console.warn("[loadData] JSON取得失敗:", sourceSpec.url, res.status);
+                return null;
+            }
+            const contentType = res.headers.get("content-type") || "";
+            if (contentType.includes("text/html")) {
+                console.warn("[loadData] HTMLが返ってきたためJSONとみなせません:", sourceSpec.url);
+                return null;
+            }
+            return await res.json();
 
         // -------------------------------
         // PMTiles（VectorTileデータ）
