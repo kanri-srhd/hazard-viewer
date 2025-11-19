@@ -69,12 +69,6 @@ async function loadViewerLayers() {
     // レイヤーマネージャ（UI）
     const uiController = await import('./layers/ui.js');
 
-    // 初期状態（全OFF）
-    hazardLayer.toggleLayer(false);
-    jibanLayer.toggleLayer(false);
-    gridLayer.toggleLayer(false);
-    capacityLayer.toggleLayer(false);
-
     // UI パネルを生成
     uiController.createLayerToggleUI({
         hazard: { label: "ハザード", toggle: hazardLayer.toggleLayer },

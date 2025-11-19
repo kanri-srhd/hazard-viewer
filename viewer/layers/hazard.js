@@ -102,8 +102,10 @@ export function toggleLayer(show) {
 
     console.log("[hazard] toggle all:", show);
 
-    // 初回のみレイヤー作成
-    addHazardLayers();
+    // 初回のみレイヤー作成（必ず先に実行）
+    if (!layersAdded) {
+        addHazardLayers();
+    }
 
     // 全ハザード一括ON/OFF
     for (const type of Object.keys(hazardTiles)) {
