@@ -33,16 +33,20 @@ export function createLayerToggleUI(layers) {
         checkbox.style.marginRight = "4px";
 
         checkbox.addEventListener("change", () => {
-            layerInfo.toggle(checkbox.checked);
 
-            // hazard の場合のみ子チェックのON/OFFを反映
+            // hazard は必ず toggleLayer(show) を呼ぶ
             if (key === "hazard") {
+                layers.hazard.toggle(checkbox.checked); // ← addHazardLayers が動く
                 const childChecks = container.querySelectorAll(".hazard-child");
                 childChecks.forEach((c) => {
                     c.checked = checkbox.checked;
                     hazardTypeToggle(c.dataset.type, checkbox.checked);
                 });
+                return;
             }
+
+            // hazard 以外
+            layerInfo.toggle(checkbox.checked);
         });
 
         const label = document.createElement("label");
