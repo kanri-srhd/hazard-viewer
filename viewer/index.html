@@ -1,79 +1,48 @@
 <!doctype html>
 <html lang="ja">
-  <head>
-    <meta charset="utf-8" />
-    <meta
-      name="viewport"
-      content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover"
-    />
-    <title>ハザード�EチE�Eビューア</title>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport"
+        content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover" />
 
-    <!-- Favicon -->
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='75' font-size='75'>🗺�E�E/text></svg>">
+  <title>統合ビューア（ハザード × 地番 × 送電網 × 空き容量）</title>
 
-    <!-- Leaflet CSS -->
-    <link
-      rel="stylesheet"
-      href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
-    />
+  <!-- MapLibre GL -->
+  <link href="https://unpkg.com/maplibre-gl@3.6.1/dist/maplibre-gl.css" rel="stylesheet" />
+  <script src="https://unpkg.com/maplibre-gl@3.6.1/dist/maplibre-gl.js"></script>
 
-    <!-- App styles -->
-    <link rel="stylesheet" href="./style.css" />
-  </head>
-  <body>
-    <header class="app-header">
-      <div class="brand">
-        <h1>ハザード�EチE�Eビューア</h1>
-        <p class="subtitle">公式XYZタイル直利用 / GSIベ�Eス / PDL1.0準拠</p>
-      </div>
-      <nav class="actions">
-        <button id="resetView" class="btn">初期位置へ</button>
-        <button id="toggleLegend" class="btn">凡例表示/非表示</button>
-        <a class="btn" href="/hazard-viewer/docs/pmtiles-viewer-national.html?v=20251113" target="_blank">🗾 全国版ビューア</a>
-        <a class="btn" href="/hazard-viewer/docs/maplibre-geojson-viewer.html?v=20251113" target="_blank">🚀 MapLibre牁E/a>
-      </nav>
-    </header>
+  <!-- アプリのスタイル -->
+  <link rel="stylesheet" href="./style.css" />
 
-    <main class="app-main">
-      <div id="map"></div>
+  <style>
+    body, html {
+      margin: 0; padding: 0; height: 100%; width: 100%;
+      font-family: sans-serif;
+      background: #fafafa;
+    }
+    #map {
+      position: absolute;
+      top: 0; bottom: 0; left: 0; right: 0;
+      width: 100%; height: 100%;
+    }
+    #layer-toggle {
+      background: white;
+      border-radius: 6px;
+      padding: 10px;
+      font-size: 14px;
+    }
+  </style>
+</head>
 
-      <aside id="legendPanel" class="panel panel-right hidden">
-        <h2>凡侁E/h2>
-        <div id="legendContent">
-          <p class="muted">レイヤを選択すると凡例が表示されます、E/p>
-        </div>
-      </aside>
+<body>
 
-      <aside id="statusPanel" class="panel panel-left">
-        <h2>スチE�Eタス</h2>
-        <ul id="statusList" class="status-list"></ul>
-      </aside>
-    </main>
+  <!-- Map container -->
+  <div id="map"></div>
 
-    <footer class="app-footer">
-      <div class="attribution">
-        <span>
-          出典�E�Disaster Map Portal / MLITT / GeoInfo Japan / 国土地琁E���E�地琁E��タイル�E�E
-        </span>
-        <span class="rules">
-          利用規紁E��PDL1.0に準拠。地琁E��コンチE��チE��用規紁E��従い出典を�E記してぁE��す、E
-        </span>
-        <span class="note">
-          一部レイヤは都道府県許諾に基づく篁E��のみ配信。未提供エリアはUI上に明示します、E
-        </span>
-      </div>
-    </footer>
+  <!-- レイヤー切替 UIパネルは ui.js が動的追加 -->
 
-    <!-- Leaflet JS -->
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <!-- MapLibre ベースの main.js を読み込む -->
+  <script type="module" src="./main.js"></script>
 
-    <!-- Configure Leaflet default icon paths -->
-    <script>
-      L.Icon.Default.prototype.options.iconUrl = 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png';
-      L.Icon.Default.prototype.options.shadowUrl = 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png';
-    </script>
-
-    <!-- App script -->
-    <script src="./app.js"></script>
-  </body>
+</body>
 </html>
