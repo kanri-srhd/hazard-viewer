@@ -82,4 +82,4 @@ async function loadViewerLayers() {
 map.on('load', () => {
     console.log("Map Loaded: Initializing Viewer Layers...");
     loadViewerLayers();
-
+});
