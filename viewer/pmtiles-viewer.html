@@ -1,0 +1,535 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>全国ハザードマップビューア (GeoJSON + Leaflet)</title>
+
+  <!-- Favicon -->
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='75' font-size='75'>🗺️</text></svg>">
+
+  <!-- Leaflet CSS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: #f5f5f5;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    header {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      padding: 20px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      z-index: 100;
+    }
+
+    header h1 {
+      font-size: 24px;
+      margin-bottom: 5px;
+    }
+
+    header p {
+      font-size: 14px;
+      opacity: 0.9;
+    }
+    
+    .region-selector {
+      background: rgba(255, 255, 255, 0.2);
+      padding: 8px 12px;
+      border-radius: 4px;
+      margin-top: 8px;
+      font-size: 13px;
+    }
+    
+    .region-selector select {
+      padding: 5px 8px;
+      border-radius: 3px;
+      border: 1px solid #ddd;
+      font-size: 12px;
+    }
+
+    main {
+      flex: 1;
+      display: flex;
+      overflow: hidden;
+    }
+
+    #map {
+      flex: 1;
+      background: #e0e0e0;
+    }
+
+    .sidebar {
+      width: 300px;
+      background: white;
+      border-left: 1px solid #ddd;
+      overflow-y: auto;
+      padding: 15px;
+      box-shadow: -2px 0 8px rgba(0, 0, 0, 0.1);
+    }
+
+    .sidebar h2 {
+      font-size: 16px;
+      margin-bottom: 10px;
+      color: #333;
+      border-bottom: 2px solid #667eea;
+      padding-bottom: 8px;
+    }
+
+    .status-list {
+      list-style: none;
+      margin-bottom: 15px;
+    }
+
+    .status-item {
+      padding: 8px;
+      margin-bottom: 5px;
+      background: #f9f9f9;
+      border-left: 3px solid #667eea;
+      font-size: 13px;
+      color: #555;
+      border-radius: 2px;
+    }
+
+    .status-item.loading {
+      border-left-color: #ff9800;
+      background: #fff8f0;
+    }
+
+    .status-item.success {
+      border-left-color: #4caf50;
+      background: #f1f8f4;
+    }
+
+    .status-item.error {
+      border-left-color: #f44336;
+      background: #fef1f1;
+    }
+
+    .info-panel {
+      background: #f9f9f9;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      padding: 10px;
+      font-size: 12px;
+      margin-top: 10px;
+    }
+
+    .info-panel dt {
+      font-weight: bold;
+      color: #333;
+      margin-top: 5px;
+    }
+
+    .info-panel dd {
+      color: #666;
+      margin-left: 10px;
+      margin-bottom: 5px;
+      word-break: break-word;
+    }
+
+    .leaflet-popup-content {
+      font-size: 12px;
+      max-width: 300px;
+    }
+
+    .leaflet-popup-content a {
+      color: #667eea;
+      text-decoration: none;
+      font-weight: bold;
+    }
+
+    .leaflet-popup-content a:hover {
+      text-decoration: underline;
+    }
+
+    footer {
+      background: #333;
+      color: #999;
+      padding: 10px 20px;
+      font-size: 12px;
+      text-align: center;
+      border-top: 1px solid #555;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>大阪市中央区 地番ポリゴン ビューア</h1>
+    <p>
+      PMTiles + Leaflet | 27128__6_r_2024.geojson から生成
+    </p>
+  </header>
+
+  <main>
+    <div id="map"></div>
+
+    <aside class="sidebar">
+      <h2>読み込み & 検索</h2>
+      <ul id="statusList" class="status-list"></ul>
+
+      <div class="info-panel">
+        <dt>🔎 検索（地番 / 住所）</dt>
+        <dd>
+          <input id="searchInput" type="text" placeholder="例: 1-2-3 や 堺筋本町" style="width:100%; padding:6px; margin-bottom:6px;" />
+          <div style="display:flex; gap:6px;">
+            <button id="searchBtn" class="btn" style="flex:1">検索</button>
+            <button id="clearSearchBtn" class="btn" style="flex:1">クリア</button>
+          </div>
+          <div id="searchResult" style="margin-top:8px; font-size:13px; color:#444"></div>
+        </dd>
+
+        <dt>🗺️ ズーム レベル</dt>
+        <dd id="zoomLevel">14</dd>
+
+        <dt>📍 中心座標</dt>
+        <dd id="centerCoord">34.6901, 135.5023</dd>
+
+        <dt>✓ 読み込み済みポリゴン</dt>
+        <dd id="tilesLoaded">0</dd>
+
+        <dt>📦 ソース</dt>
+        <dd>
+          <a href="https://github.com/kanri-srhd/hazard-viewer" target="_blank">hazard-viewer</a> / GitHub Pages
+        </dd>
+      </div>
+    </aside>
+  </main>
+
+  <footer>
+    <p>
+      &copy; 2025 Hazard Viewer | Data: GeoJSON (全国対応) | License: PDL 1.0 | 詳細: <a href="../INSTALL_NATIONAL_DATA.md" style="color:#fff;text-decoration:underline;">全国データ対応ガイド</a>
+    </p>
+  </footer>
+
+  <!-- Leaflet JS -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+  <!-- PMTiles library -->
+  <script src="https://unpkg.com/pmtiles@3/dist/pmtiles.js"></script>
+
+  <!-- Leaflet VectorGrid (for rendering vector tiles / MVT) -->
+  <script src="https://unpkg.com/leaflet.vectorgrid/dist/Leaflet.VectorGrid.bundled.js"></script>
+
+  <script>
+    // =====================================
+    // グローバル変数（全国対応）
+    // =====================================
+    const statusList = document.getElementById('statusList');
+    let cadastralGeojsonCache = {}; // 地域別キャッシュ
+    let currentRegion = 'osaka'; // 現在の選択地域
+    const regionDataMap = {
+      osaka: {
+        name: '大阪府（中央区）',
+        url: '../geojson/27128__6_r_2024.geojson',
+        bounds: [[34.63, 135.45], [34.73, 135.55]],
+        center: [34.6901, 135.5023]
+      },
+      tokyo: {
+        name: '東京都（サンプル）',
+        url: '../geojson/27128__6_r_2024.geojson', // 実装時に東京データに置き換え
+        bounds: [[35.62, 139.62], [35.82, 139.92]],
+        center: [35.7, 139.77]
+      },
+      kyoto: {
+        name: '京都府（サンプル）',
+        url: '../geojson/27128__6_r_2024.geojson', // 実装時に京都データに置き換え
+        bounds: [[34.77, 135.35], [35.35, 135.95]],
+        center: [35.0, 135.65]
+      }
+    };
+
+    function addStatus(message, type = 'info') {
+      const li = document.createElement('li');
+      li.className = 'status-item ' + type;
+      li.textContent = message;
+      statusList.insertBefore(li, statusList.firstChild);
+
+      while (statusList.children.length > 10) {
+        statusList.removeChild(statusList.lastChild);
+      }
+    }
+
+    // =====================================
+    // 地図初期化
+    // =====================================
+    const map = L.map('map').setView([36.5, 137.5], 5); // 初期：日本全体
+
+    // ベースマップ（GSI 淡色）
+    L.tileLayer('https://cyberjapandata.gsi.go.jp/xyz/pale/{z}/{x}/{y}.png', {
+      maxZoom: 18,
+      attribution: '&copy; <a href="https://maps.gsi.go.jp/">国土地理院</a>'
+    }).addTo(map);
+
+    addStatus('全国ハザードマップビューアを初期化しました', 'success');
+
+    // =====================================
+    // 地籍・ハザードデータのロード（地域別対応）
+    // =====================================
+    var cadastralVectorLayer = null;
+    var cadastralGeojson = null;
+    var parcelLayerForSearch = null;
+    var hazardLayers = {};
+
+    function loadRegionData(regionKey) {
+      currentRegion = regionKey;
+      const regionInfo = regionDataMap[regionKey];
+      
+      if (!regionInfo) {
+        addStatus('無効な地域コード: ' + regionKey, 'error');
+        return;
+      }
+      
+      addStatus(regionInfo.name + ' を読み込み中...', 'loading');
+      
+      // 既存レイヤを削除
+      if (cadastralVectorLayer) {
+        map.removeLayer(cadastralVectorLayer);
+      }
+      
+      // キャッシュから取得、なければ fetch
+      if (cadastralGeojsonCache[regionKey]) {
+        cadastralGeojson = cadastralGeojsonCache[regionKey];
+        displayCadastralLayer();
+      } else {
+        fetch(regionInfo.url)
+          .then(res => res.json())
+          .then(geojson => {
+            cadastralGeojsonCache[regionKey] = geojson;
+            cadastralGeojson = geojson;
+            displayCadastralLayer();
+            
+            // 地域の境界にズーム
+            map.fitBounds(regionInfo.bounds);
+            
+            addStatus(regionInfo.name + ' の地籍データを読み込みました (' + geojson.features.length + ' 件)', 'success');
+          })
+          .catch(err => {
+            console.error('Data load error:', err);
+            addStatus(regionInfo.name + ' の読み込みに失敗しました', 'error');
+          });
+      }
+    }
+    
+    function displayCadastralLayer() {
+      if (!cadastralGeojson) return;
+      
+      const cadastralStyle = {
+        color: '#333',
+        weight: 1,
+        opacity: 1,
+        fillColor: '#ffcc00',
+        fillOpacity: 0.4
+      };
+
+      cadastralVectorLayer = L.geoJSON(cadastralGeojson, {
+        style: cadastralStyle,
+        onEachFeature: function(feature, layer) {
+          var props = feature.properties || {};
+          var popupHtml = '<div style="font-size:12px; max-width:300px;"><strong>地籍</strong><br>';
+          if (props['大字']) popupHtml += '大字: ' + props['大字'] + '<br>';
+          if (props['町']) popupHtml += '町: ' + props['町'] + '<br>';
+          if (props['地番']) popupHtml += '<strong>地番: ' + props['地番'] + '</strong><br>';
+          if (props['住所']) popupHtml += '住所: ' + props['住所'] + '<br>';
+          if (props['精度']) popupHtml += '精度区分: ' + props['精度'] + '<br>';
+          
+          // Google Maps リンク
+          if (feature.geometry.type === 'Polygon') {
+            var coords = feature.geometry.coordinates[0][0];
+            var lat = coords[1];
+            var lng = coords[0];
+            popupHtml += '<a href="https://maps.google.com/?q=' + lat + ',' + lng + '" target="_blank">📍 Google Maps で開く</a>';
+          }
+          popupHtml += '</div>';
+          
+          layer.bindPopup(popupHtml);
+          
+          layer.on('mouseover', function() {
+            this.setStyle({
+              fillColor: '#ff9800',
+              fillOpacity: 0.6,
+              weight: 2
+            });
+          });
+          layer.on('mouseout', function() {
+            this.setStyle({
+              fillColor: '#ffcc00',
+              fillOpacity: 0.4,
+              weight: 1
+            });
+          });
+          
+          layer.on('click', function() {
+            this.openPopup();
+          });
+        }
+      });
+
+      cadastralVectorLayer.addTo(map);
+      parcelLayerForSearch = cadastralVectorLayer;
+      
+      updateLayerControls();
+    }
+
+    // =====================================
+    // GeoJSON ハザードデータのロード（全国対応）
+    // =====================================
+        var featureCount = geojson.features.length;
+        document.getElementById('tilesLoaded').textContent = featureCount;
+        addStatus('大阪市中央区地籍データ読み込み完了 (' + featureCount + ' ポリゴン)', 'success');
+        return geojson;
+      })
+      .catch(function(err) {
+        console.error('GeoJSON 読み込みエラー:', err);
+        addStatus('地籍データ読み込み失敗', 'error');
+        throw err;
+      });
+
+    // ハザード GeoJSON レイヤを読み込み
+    function loadHazard(name, url, style) {
+      addStatus(name + ' を読み込み中...', 'loading');
+      return fetch(url)
+        .then(function(r){ return r.json(); })
+        .then(function(gj){
+          var layer = L.geoJSON(gj, {
+            style: style,
+            onEachFeature: function(f, lyr){
+              var p = f.properties || {};
+              var popup = '<div style="font-size:12px;">';
+              popup += '<strong>' + (p['name'] || name) + '</strong><br>';
+              popup += (p['hazard_type']? ('種類: '+p['hazard_type']+'<br>') : '');
+              if (p['severity'] || p['level']) popup += '危険度: ' + (p['severity'] || p['level']) + '<br>';
+              if (p['source']) popup += '出典: ' + p['source'] + '<br>';
+              popup += '</div>';
+              lyr.bindPopup(popup);
+            }
+          });
+          hazardLayers[name] = layer;
+          addStatus(name + ' 読み込み完了 (' + gj.features.length + ' 件)', 'success');
+          return layer;
+        })
+        .catch(function(err){ addStatus(name + ' 読み込み失敗', 'error'); console.warn(err); });
+    }
+
+    // スタイル要件に合わせる
+    var floodStyle = { color:'#0b66ff', weight:1, fillColor:'#0b66ff', fillOpacity:0.3 };
+    var landslideStyle = { color:'#ff8c00', weight:1, fillColor:'#ff8c00', fillOpacity:0.3 };
+    var tsunamiStyle = { color:'#00c8d8', weight:1, fillColor:'#00c8d8', fillOpacity:0.3 };
+
+    // 地籍（GeoJSON）とハザード（3つ）のすべてを読み込み完了後にレイヤコントロールを追加
+    Promise.all([
+      cadastralPromise,
+      loadHazard('洪水', '../geojson/hazard_sample_flood_osaka.geojson', floodStyle),
+      loadHazard('土砂災害', '../geojson/hazard_sample_landslide_osaka.geojson', landslideStyle),
+      loadHazard('津波', '../geojson/hazard_sample_tsunami_osaka.geojson', tsunamiStyle)
+    ]).then(function(results){
+      // すべてのデータが読み込まれた後、レイヤコントロールを追加
+      if (cadastralVectorLayer) {
+        var overlays = {
+          '地籍': cadastralVectorLayer,
+          '洪水': hazardLayers['洪水'],
+          '土砂災害': hazardLayers['土砂災害'],
+          '津波': hazardLayers['津波']
+        };
+        L.control.layers(null, overlays, {collapsed:false}).addTo(map);
+        addStatus('レイヤコントロールを追加しました', 'success');
+      } else {
+        addStatus('レイヤコントロール追加失敗: 地籍レイヤが null です', 'error');
+      }
+    }).catch(function(err){
+      console.error('レイヤ読み込みエラー:', err);
+      addStatus('一部のレイヤ読み込みに失敗しました', 'error');
+    });
+
+    // 注: PMTiles は MapLibre GL JS 等のベクトルタイル対応ライブラリとの連携を推奨
+    // 本実装は GeoJSON ベースの高速表示に最適化しています
+
+    // =====================================
+    // ハザード GeoJSON レイヤを読み込み
+    // =====================================
+
+    // =====================================
+    // 検索機能
+    // =====================================
+    var currentHighlight = null;
+    function clearHighlight(){ if (currentHighlight) { map.removeLayer(currentHighlight); currentHighlight = null; } }
+
+    document.getElementById('searchBtn').addEventListener('click', function(){
+      var q = document.getElementById('searchInput').value.trim();
+      if (!q) { document.getElementById('searchResult').textContent = '検索語を入力してください'; return; }
+      if (!cadastralGeojson) { document.getElementById('searchResult').textContent = '検索用データを読み込み中です'; return; }
+
+      var results = [];
+      var ql = q.toLowerCase();
+      cadastralGeojson.features.forEach(function(f){
+        var p = f.properties || {};
+        var keys = ['地番','住所','大字','町','chiban','address'];
+        for (var i=0;i<keys.length;i++){
+          var v = p[keys[i]] || '';
+          if (typeof v === 'string' && v.toLowerCase().indexOf(ql) !== -1) { results.push(f); break; }
+        }
+      });
+
+      if (results.length === 0){
+        document.getElementById('searchResult').textContent = '該当なし';
+        return;
+      }
+
+      document.getElementById('searchResult').textContent = results.length + ' 件ヒット';
+      // 最初の結果にズーム
+      var feat = results[0];
+      var bounds = L.geoJSON(feat).getBounds();
+      map.fitBounds(bounds.pad(1.2));
+
+      clearHighlight();
+      currentHighlight = L.geoJSON(feat, {style:{color:'#333', weight:2, fillColor:'#ffcc00', fillOpacity:0.6}}).addTo(map);
+
+      // ポップアップ表示
+      var props = feat.properties || {};
+      var popupHtml = '<div style="font-size:12px; max-width:300px;"><strong>地籍</strong><br>';
+      if (props['大字']) popupHtml += '大字: ' + props['大字'] + '<br>';
+      if (props['町']) popupHtml += '町: ' + props['町'] + '<br>';
+      if (props['地番']) popupHtml += '<strong>地番: ' + props['地番'] + '</strong><br>';
+      if (props['住所']) popupHtml += '住所: ' + props['住所'] + '<br>';
+      // center of bounds
+      var center = bounds.getCenter();
+      popupHtml += '<a href="https://maps.google.com/?q=' + center.lat + ',' + center.lng + '" target="_blank">📍 Google Maps で開く</a>';
+      popupHtml += '</div>';
+      L.popup().setLatLng(center).setContent(popupHtml).openOn(map);
+    });
+
+    document.getElementById('clearSearchBtn').addEventListener('click', function(){
+      document.getElementById('searchInput').value = '';
+      document.getElementById('searchResult').textContent = '';
+      clearHighlight();
+      map.closePopup();
+    });
+
+    // =====================================
+    // 地図操作監視
+    // =====================================
+
+    map.on('zoomend', function() {
+      document.getElementById('zoomLevel').textContent = map.getZoom();
+    });
+
+    map.on('moveend', function() {
+      var center = map.getCenter();
+      document.getElementById('centerCoord').textContent = center.lat.toFixed(4) + ', ' + center.lng.toFixed(4);
+    });
+
+    addStatus('ビューア準備完了 - ポリゴンをクリックして地番情報を表示', 'success');
+  </script>
+</body>
+</html>

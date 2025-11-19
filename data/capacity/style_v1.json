@@ -1,0 +1,5 @@
+{
+  "thresholds": [80, 60, 40, 20, 0],
+  "colors": ["#0033ff", "#33aaff", "#ffff00", "#ffaa00", "#ff0000"],
+  "legend": "空き容量（MW）"
+}
