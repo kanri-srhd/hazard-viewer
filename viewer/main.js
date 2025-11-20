@@ -1,4 +1,5 @@
 import { parseInput } from "./utils/geocode.js";
+import { createLayerToggleUI } from "./layers/ui.js";
 
 // 地図初期化(大阪本社)
 const map = new maplibregl.Map({
@@ -42,6 +43,13 @@ map.on("load",()=>{
         source:"gsi-photo",
         layout:{visibility:"none"},
         paint:{"raster-opacity":0.4}
+    });
+
+    createLayerToggleUI({
+        hazard: { label: "ハザード", toggle: () => {} },
+        jiban: { label: "地番", toggle: () => {} },
+        grid: { label: "送電網", toggle: () => {} },
+        capacity: { label: "空き容量", toggle: () => {} }
     });
 });
 
