@@ -25,7 +25,7 @@ body,html{margin:0;padding:0;height:100%;width:100%;font-family:sans-serif;}
   padding:8px 12px;
   border-radius:6px;
   box-shadow:0 2px 8px rgba(0,0,0,0.2);
-  z-index:1000;
+  z-index:20;
   display:flex;
   gap:6px;
 }
@@ -34,24 +34,25 @@ body,html{margin:0;padding:0;height:100%;width:100%;font-family:sans-serif;}
 /* レイヤーパネル */
 #layer-control{
   position:absolute;
-  top:80px;
+  top:160px;
   left:10px;
   background:#fff;
   padding:10px;
   border-radius:6px;
-  z-index:900;
+  z-index:10;
   box-shadow:0 2px 6px rgba(0,0,0,0.15);
+  width:220px;
 }
 
 /* 航空写真コントロール(右上) */
 #photo-control{
   position:absolute;
-  top:80px;
+  top:100px;
   right:10px;
   background:#fff;
   padding:10px;
   border-radius:6px;
-  z-index:900;
+  z-index:10;
   box-shadow:0 2px 6px rgba(0,0,0,0.15);
   width:180px;
 }
@@ -64,7 +65,7 @@ body,html{margin:0;padding:0;height:100%;width:100%;font-family:sans-serif;}
   background:#fff;
   padding:10px 14px;
   border-radius:6px;
-  z-index:900;
+  z-index:10;
   cursor:pointer;
   box-shadow:0 2px 6px rgba(0,0,0,0.2);
 }

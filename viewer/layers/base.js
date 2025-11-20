@@ -70,7 +70,7 @@ export async function initBaseLayers(map) {
             "fill-color": "#d57f00",
             "fill-opacity": 0.2
         }
-    }, "gsi-layer");
+    }, "gsi-photo-layer");
 
     map.addLayer({
         id: "gsi-bldg-outline",

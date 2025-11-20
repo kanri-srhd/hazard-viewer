@@ -42,7 +42,7 @@ map.on("load",()=>{
         source:"gsi-photo",
         layout:{visibility:"none"},
         paint:{"raster-opacity":0.4}
-    },"gsi-layer");
+    });
 });
 
 // マーカー管理
