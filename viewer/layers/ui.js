@@ -1,22 +1,35 @@
 // ======================================================================
-// viewer/layers/ui.js - 高機能レイヤートグルUI（フェーズ2強化版）
+// viewer/layers/ui.js - Google Maps風UI + スマホ全画面対応版
 // 
 // 機能:
-// - アコーディオン式セクション（ハザード・地図・送電網・その他）
-// - 都道府県セレクトボックス統合
-// - 透明度スライダー（航空写真・ハザード4種）
-// - 折りたたみ可能なセクション
-// - レスポンシブ対応
+// - PC: 左スライドイン Drawer
+// - スマホ: 下スライドイン Bottom Sheet（全画面）
+// - メニューアイコン（≡）によるトグル
+// - アコーディオン式セクション
+// - 透明度スライダー
+// - レスポンシブ自動判定
 // ======================================================================
 
 import { PREF_POLYGONS } from "../utils/pref_polygons.js";
 
+let isPanelOpen = false;
+let isMobile = false;
+
 /**
- * レイヤートグルUIを生成（統合版）
+ * レイヤートグルUI生成（Google Maps風 + スマホ対応）
  * @param {maplibregl.Map} map - MapLibre インスタンス
  * @param {Object} callbacks - コールバック関数群
  */
 export function createLayerToggleUI(map, callbacks = {}) {
+    console.log("[ui] Creating Google Maps-style layer UI");
+
+    // モバイル判定
+    isMobile = window.innerWidth < 768;
+
+    // メニューボタンのイベント設定
+    setupMenuToggle();
+
+    // レイヤーパネルのコンテンツ生成
     const panel = document.getElementById("layer-control");
     if (!panel) {
         console.error("[ui] #layer-control not found");
@@ -43,7 +56,105 @@ export function createLayerToggleUI(map, callbacks = {}) {
     // 送電網・地番セクション
     createUtilitySection(panel, callbacks);
 
-    console.log("[ui] Layer control UI created");
+    // リサイズ対応
+    window.addEventListener("resize", handleResize);
+
+    console.log("[ui] Layer UI created successfully");
+}
+
+/**
+ * メニューボタンのトグル設定
+ */
+function setupMenuToggle() {
+    const menuBtn = document.getElementById("menu-toggle");
+    const panel = document.getElementById("layer-panel");
+    const overlay = document.getElementById("panel-overlay");
+
+    if (!menuBtn || !panel) return;
+
+    menuBtn.addEventListener("click", () => {
+        togglePanel();
+    });
+
+    // オーバーレイクリックで閉じる（スマホ用）
+    if (overlay) {
+        overlay.addEventListener("click", () => {
+            if (isPanelOpen) {
+                togglePanel();
+            }
+        });
+    }
+
+    // 初期状態: PCでは表示、スマホでは非表示
+    if (window.innerWidth >= 768) {
+        isPanelOpen = true;
+        panel.classList.remove("hidden");
+    } else {
+        isPanelOpen = false;
+        panel.classList.add("hidden");
+    }
+}
+
+/**
+ * パネルの開閉トグル
+ */
+function togglePanel() {
+    const panel = document.getElementById("layer-panel");
+    const overlay = document.getElementById("panel-overlay");
+
+    isPanelOpen = !isPanelOpen;
+
+    if (isMobile) {
+        // スマホ: Bottom Sheet
+        if (isPanelOpen) {
+            panel.classList.add("active");
+            panel.classList.remove("hidden");
+            overlay.classList.add("active");
+        } else {
+            panel.classList.remove("active");
+            setTimeout(() => {
+                panel.classList.add("hidden");
+            }, 300);
+            overlay.classList.remove("active");
+        }
+    } else {
+        // PC: Drawer
+        if (isPanelOpen) {
+            panel.classList.remove("hidden");
+        } else {
+            panel.classList.add("hidden");
+        }
+    }
+
+    console.log(`[ui] Panel ${isPanelOpen ? "opened" : "closed"}`);
+}
+
+/**
+ * リサイズハンドラ
+ */
+function handleResize() {
+    const prevMobile = isMobile;
+    isMobile = window.innerWidth < 768;
+
+    // モバイル ⇔ PC 切り替え時の処理
+    if (prevMobile !== isMobile) {
+        const panel = document.getElementById("layer-panel");
+        const overlay = document.getElementById("panel-overlay");
+
+        // クラスをリセット
+        panel.classList.remove("active", "hidden");
+        overlay.classList.remove("active");
+
+        // 初期状態を設定
+        if (isMobile) {
+            isPanelOpen = false;
+            panel.classList.add("hidden");
+        } else {
+            isPanelOpen = true;
+        }
+
+        console.log(`[ui] Switched to ${isMobile ? "mobile" : "desktop"} mode`);
+    }
 }
 
 /**
@@ -77,7 +188,7 @@ function createPrefSelectSection(panel, onPrefChange) {
     container.appendChild(select);
     panel.appendChild(container);
 
-    console.log("[ui] Prefecture select populated with 47 prefectures");
+    console.log("[ui] Prefecture select populated");
 }
 
 /**
@@ -262,11 +373,17 @@ function createLayerItem(item, map, hasOpacity) {
 }
 
 /**
- * パネルサイズ調整
+ * パネルサイズ調整（エクスポート用）
  */
 export function adjustPanelSize() {
+    // スマホ版は固定サイズのため調整不要
+    if (window.innerWidth < 768) {
+        return;
+    }
+
     const panel = document.getElementById("layer-control");
     if (panel) {
-        panel.style.maxHeight = Math.max(200, window.innerHeight - 100) + "px";
+        const maxHeight = Math.max(200, window.innerHeight - 160);
+        panel.style.maxHeight = maxHeight + "px";
     }
 }

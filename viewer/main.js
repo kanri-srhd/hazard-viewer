@@ -1,20 +1,15 @@
 // ======================================================================
-// viewer/main.js - フェーズ2最終統合版（A〜E 全改善実装）
+// viewer/main.js - Google Maps風UI + スマホ全画面対応版
 // 
 // 機能:
-// - MapLibre GL JS による地図表示（国土地理院 標準地図 / 航空写真）
+// - Google Maps風 UI コンポーネント
+// - ズームボタン（＋/－）
+// - 現在地ボタン（GeolocateControl）
+// - スケールコントロール
+// - レイヤーパネル（PC: Drawer / スマホ: Bottom Sheet）
 // - 赤ピン（検索結果）/ 青ピン（クリック地点）with Popup
 // - 都道府県ポリゴン判定による自動県コード更新
-// - ハザードレイヤー動的切替（pref_data / data キャッシュ高速化）
-// - 住所・地番・座標検索との連携
-// - 統合レイヤーUI（アコーディオン式、透明度スライダー付き）
-// 
-// 改善点（A〜E）:
-// A) 都道府県セレクトボックス自動生成（pref_polygons.js から）
-// B) レイヤートグルUI高機能版（セクション・アコーディオン・透明度）
-// C) hazard.js のキャッシュ高速化（HEAD チェック結果保存）
-// D) ピン Popup 機能拡張（座標表示・コピー・移動ボタン）
-// E) レイヤー順序・透明度・UI統合強化
+// - ハザードレイヤー動的切替（キャッシュ高速化）
 // ======================================================================
 
 import { detectPrefecture } from "./utils/prefDetect.js";
@@ -97,9 +92,14 @@ map.on("load", () => {
     });
 
     // --------------------------------------------------
-    // ハザードレイヤー初期化（フェーズ2版）
+    // ハザードレイヤー初期化
     // --------------------------------------------------
     initializeHazardLayers(map);
+
+    // --------------------------------------------------
+    // Google Maps風コントロール追加
+    // --------------------------------------------------
+    addGoogleMapsStyleControls();
 
     // --------------------------------------------------
     // 統合レイヤートグルUI生成
@@ -131,6 +131,44 @@ map.on("load", () => {
     const center = map.getCenter();
     updatePrefectureByCoords(center.lat, center.lng);
 });
+
+// ======================================================================
+// Google Maps風コントロール追加
+// ======================================================================
+
+function addGoogleMapsStyleControls() {
+    // --------------------------------------------------
+    // ズームコントロール（＋/－）
+    // --------------------------------------------------
+    const nav = new maplibregl.NavigationControl({
+        showCompass: false,
+        visualizePitch: false
+    });
+    map.addControl(nav, "bottom-right");
+
+    // --------------------------------------------------
+    // 現在地ボタン（GeolocateControl）
+    // --------------------------------------------------
+    const geolocate = new maplibregl.GeolocateControl({
+        positionOptions: {
+            enableHighAccuracy: true
+        },
+        trackUserLocation: true,
+        showUserHeading: true
+    });
+    map.addControl(geolocate, "bottom-right");
+
+    // --------------------------------------------------
+    // スケールコントロール（メートル表記）
+    // --------------------------------------------------
+    const scale = new maplibregl.ScaleControl({
+        maxWidth: 100,
+        unit: "metric"
+    });
+    map.addControl(scale, "bottom-left");
+
+    console.log("[main.js] Google Maps-style controls added");
+}
 
 // ======================================================================
 // 都道府県判定 & 更新関数
@@ -401,4 +439,4 @@ window.clearAllPins = () => {
     userMarker = null;
 };
 
-console.log("[main.js] フェーズ2最終統合版ロード完了（A〜E全改善実装）");
+console.log("[main.js] Google Maps風UI + スマホ全画面対応版ロード完了");

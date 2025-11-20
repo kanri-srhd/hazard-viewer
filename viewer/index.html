@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <title>統合ビューア - ハザード・送電網・地番</title>
-<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 <meta http-equiv="Cache-Control" content="no-store" />
 <meta http-equiv="Pragma" content="no-cache" />
 <meta http-equiv="Expires" content="0" />
@@ -27,19 +27,35 @@ if ('serviceWorker' in navigator) {
 }
 </script>
 
+<!-- 地図コンテナ -->
 <div id="map"></div>
 
-<div id="search-panel">
-  <input id="search-input" type="text" placeholder="住所 / 地番 / 座標" />
-  <button id="search-btn">🔍 検索</button>
+<!-- Google Maps風 検索バー -->
+<div id="search-bar">
+  <div class="search-icon">🔍</div>
+  <input id="search-input" type="text" placeholder="住所、地番、座標を検索" />
+  <button id="search-btn">検索</button>
 </div>
 
-<!-- レイヤーパネル（JS側で動的生成） -->
-<div id="layer-control"></div>
+<!-- メニューアイコン（≡） -->
+<button id="menu-toggle" class="map-control-btn" aria-label="レイヤーメニュー">
+  <span class="menu-icon">☰</span>
+</button>
+
+<!-- レイヤーパネル（PC: Drawer / Mobile: Bottom Sheet） -->
+<div id="layer-panel" class="layer-panel">
+  <div class="drag-handle"></div>
+  <div id="layer-control"></div>
+</div>
+
+<!-- パネル背景オーバーレイ（スマホ用） -->
+<div id="panel-overlay" class="panel-overlay"></div>
 
 <!-- ピン削除ボタン -->
-<div id="clear-pins">🗑 ピン削除</div>
+<button id="clear-pins" class="map-control-btn clear-pins-btn" aria-label="ピン削除">
+  🗑
+</button>
 
-<script type="module" src="./main.js?v=20251120-03"></script>
+<script type="module" src="./main.js?v=20251120-04"></script>
 </body>
 </html>

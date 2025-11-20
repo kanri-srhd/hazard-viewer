@@ -1,18 +1,23 @@
 /* ======================================================================
-   viewer/style.css
-   統合ビューア用スタイルシート
+   viewer/style.css - Google Maps風UI + スマホ全画面対応版
    ====================================================================== */
 
 /* ======================================================================
    基本レイアウト
    ====================================================================== */
+* {
+    box-sizing: border-box;
+}
+
 body, html {
     margin: 0;
     padding: 0;
     height: 100%;
     width: 100%;
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    font-family: 'Roboto', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     font-size: 14px;
+    overflow: hidden;
+    -webkit-font-smoothing: antialiased;
 }
 
 #map {
@@ -24,47 +29,54 @@ body, html {
 }
 
 /* ======================================================================
-   検索バー
+   Google Maps風 検索バー
    ====================================================================== */
-#search-panel {
+#search-bar {
     position: absolute;
-    top: 12px;
+    top: 16px;
     left: 50%;
     transform: translateX(-50%);
-    background: rgba(255, 255, 255, 0.95);
-    backdrop-filter: blur(8px);
-    padding: 10px 14px;
+    background: white;
     border-radius: 8px;
-    box-shadow: 0 3px 12px rgba(0, 0, 0, 0.25);
-    z-index: 20;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+    z-index: 1000;
     display: flex;
-    gap: 8px;
     align-items: center;
+    padding: 0 12px;
+    height: 48px;
+    width: 90%;
+    max-width: 600px;
+    transition: box-shadow 0.2s;
+}
+
+#search-bar:hover {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35);
+}
+
+#search-bar .search-icon {
+    font-size: 20px;
+    margin-right: 10px;
+    color: #666;
 }
 
 #search-input {
-    width: 280px;
-    padding: 8px 12px;
-    border: 1px solid #ccc;
-    border-radius: 4px;
-    font-size: 14px;
+    flex: 1;
+    border: none;
     outline: none;
-    transition: border-color 0.2s;
-}
-
-#search-input:focus {
-    border-color: #4285f4;
-    box-shadow: 0 0 0 2px rgba(66, 133, 244, 0.1);
+    font-size: 16px;
+    padding: 10px 0;
+    background: transparent;
 }
 
 #search-btn {
-    padding: 8px 16px;
     background: #4285f4;
     color: white;
     border: none;
     border-radius: 4px;
+    padding: 8px 16px;
     cursor: pointer;
     font-size: 14px;
+    font-weight: 500;
     transition: background 0.2s;
 }
 
@@ -72,40 +84,119 @@ body, html {
     background: #3367d6;
 }
 
+#search-btn:active {
+    background: #2c5bbd;
+}
+
 /* ======================================================================
-   レイヤーパネル（統合版）
+   メニューアイコン（≡）- Google Maps風
    ====================================================================== */
-#layer-control {
+#menu-toggle {
     position: absolute;
     top: 80px;
-    left: 10px;
-    width: 280px;
-    max-width: calc(100vw - 30px);
-    padding: 0;
-    background: rgba(255, 255, 255, 0.96);
-    backdrop-filter: blur(10px);
-    border-radius: 10px;
+    left: 16px;
+    z-index: 999;
+}
+
+.menu-icon {
+    font-size: 24px;
+    line-height: 1;
+}
+
+/* ======================================================================
+   地図コントロールボタン（共通スタイル）
+   ====================================================================== */
+.map-control-btn {
+    width: 40px;
+    height: 40px;
+    background: white;
+    border: none;
+    border-radius: 50%;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+    transition: all 0.2s;
+    user-select: none;
+}
+
+.map-control-btn:hover {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35);
+    transform: scale(1.05);
+}
+
+.map-control-btn:active {
+    transform: scale(0.95);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+/* ======================================================================
+   ピン削除ボタン
+   ====================================================================== */
+.clear-pins-btn {
+    position: absolute;
+    right: 16px;
+    bottom: 140px;
+    z-index: 10;
+}
+
+/* ======================================================================
+   レイヤーパネル - PC版（Drawer）
+   ====================================================================== */
+.layer-panel {
+    position: absolute;
+    top: 140px;
+    left: 16px;
+    width: 320px;
+    max-height: calc(100vh - 160px);
+    background: white;
+    border-radius: 12px;
     box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
-    font-size: 14px;
-    z-index: 15;
-    max-height: calc(100vh - 100px);
+    z-index: 998;
+    overflow: hidden;
+    transform: translateX(0);
+    transition: transform 0.3s ease, opacity 0.3s ease;
+    opacity: 1;
+}
+
+.layer-panel.hidden {
+    transform: translateX(-100%);
+    opacity: 0;
+    pointer-events: none;
+}
+
+.drag-handle {
+    display: none;
+}
+
+#layer-control {
+    max-height: calc(100vh - 160px);
     overflow-y: auto;
 }
 
+/* ======================================================================
+   レイヤーパネル - ヘッダー
+   ====================================================================== */
 #layer-control h3 {
     margin: 0;
-    padding: 14px 16px;
+    padding: 16px 20px;
     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
     color: white;
-    font-size: 16px;
+    font-size: 18px;
     font-weight: 600;
-    border-radius: 10px 10px 0 0;
     text-align: center;
+    position: sticky;
+    top: 0;
+    z-index: 10;
 }
 
-/* 都道府県セレクト */
+/* ======================================================================
+   都道府県セレクト
+   ====================================================================== */
 .pref-select-container {
-    padding: 12px 16px;
+    padding: 16px 20px;
     background: #f8f9fa;
     border-bottom: 1px solid #e0e0e0;
 }
@@ -114,16 +205,16 @@ body, html {
     display: block;
     font-size: 12px;
     color: #555;
-    margin-bottom: 4px;
+    margin-bottom: 6px;
     font-weight: 600;
 }
 
 #prefSelect {
     width: 100%;
-    padding: 8px;
-    border: 1px solid #ccc;
-    border-radius: 4px;
-    font-size: 13px;
+    padding: 10px 12px;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    font-size: 14px;
     background: white;
     cursor: pointer;
     outline: none;
@@ -132,10 +223,12 @@ body, html {
 
 #prefSelect:focus {
     border-color: #667eea;
-    box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.1);
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
 }
 
-/* セクション（アコーディオン） */
+/* ======================================================================
+   セクション（アコーディオン）
+   ====================================================================== */
 .layer-section {
     border-bottom: 1px solid #e0e0e0;
 }
@@ -145,7 +238,7 @@ body, html {
 }
 
 .section-header {
-    padding: 12px 16px;
+    padding: 14px 20px;
     background: #fafafa;
     cursor: pointer;
     user-select: none;
@@ -161,11 +254,6 @@ body, html {
     background: #f0f0f0;
 }
 
-.section-header .icon {
-    font-size: 16px;
-    margin-right: 8px;
-}
-
 .section-header .toggle-arrow {
     font-size: 12px;
     color: #999;
@@ -177,23 +265,26 @@ body, html {
 }
 
 .section-content {
-    padding: 8px 16px 12px;
+    padding: 12px 20px 16px;
     background: white;
-    max-height: 500px;
+    max-height: 600px;
     overflow: hidden;
-    transition: max-height 0.3s ease-out;
+    transition: max-height 0.3s ease-out, padding 0.3s ease-out;
 }
 
 .section-content.collapsed {
     max-height: 0;
-    padding: 0 16px;
+    padding: 0 20px;
 }
 
-/* レイヤー項目 */
+/* ======================================================================
+   レイヤー項目
+   ====================================================================== */
 .layer-item {
     display: flex;
     align-items: center;
-    margin-bottom: 10px;
+    margin-bottom: 12px;
+    min-height: 28px;
 }
 
 .layer-item:last-child {
@@ -202,75 +293,98 @@ body, html {
 
 .layer-item input[type="checkbox"] {
     margin: 0;
-    margin-right: 8px;
+    margin-right: 10px;
     cursor: pointer;
-    width: 16px;
-    height: 16px;
+    width: 18px;
+    height: 18px;
 }
 
 .layer-item label {
     flex: 1;
     cursor: pointer;
     color: #333;
-    font-size: 13px;
+    font-size: 14px;
+    display: flex;
+    align-items: center;
 }
 
 .layer-item .layer-icon {
-    margin-right: 6px;
-    font-size: 14px;
+    margin-right: 8px;
+    font-size: 16px;
 }
 
-/* 透明度スライダー */
+/* ======================================================================
+   透明度スライダー
+   ====================================================================== */
 .opacity-slider {
-    margin-top: 8px;
-    padding-left: 24px;
+    margin-top: 10px;
+    padding-left: 28px;
 }
 
 .opacity-slider label {
     display: block;
     font-size: 11px;
     color: #777;
-    margin-bottom: 4px;
+    margin-bottom: 6px;
 }
 
 .opacity-slider input[type="range"] {
     width: 100%;
+    height: 6px;
     cursor: pointer;
+    -webkit-appearance: none;
+    appearance: none;
+    background: #ddd;
+    border-radius: 3px;
+    outline: none;
+}
+
+.opacity-slider input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 18px;
+    height: 18px;
+    background: #667eea;
+    border-radius: 50%;
+    cursor: pointer;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.opacity-slider input[type="range"]::-moz-range-thumb {
+    width: 18px;
+    height: 18px;
+    background: #667eea;
+    border-radius: 50%;
+    cursor: pointer;
+    border: none;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
 }
 
 /* ======================================================================
-   ピン削除ボタン
+   パネル背景オーバーレイ（スマホ用）
    ====================================================================== */
-#clear-pins {
-    position: absolute;
-    right: 10px;
-    bottom: 40px;
-    background: rgba(255, 255, 255, 0.95);
-    backdrop-filter: blur(8px);
-    padding: 12px 16px;
-    border-radius: 8px;
-    z-index: 10;
-    cursor: pointer;
-    box-shadow: 0 3px 12px rgba(0, 0, 0, 0.25);
-    font-size: 14px;
-    transition: background 0.2s, transform 0.1s;
-    user-select: none;
+.panel-overlay {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 997;
+    opacity: 0;
+    transition: opacity 0.3s ease;
 }
 
-#clear-pins:hover {
-    background: rgba(255, 245, 245, 0.98);
-    transform: scale(1.05);
-}
-
-#clear-pins:active {
-    transform: scale(0.98);
+.panel-overlay.active {
+    opacity: 1;
 }
 
 /* ======================================================================
    Popup スタイル
    ====================================================================== */
 .maplibregl-popup-content {
-    padding: 12px;
+    padding: 14px;
     border-radius: 8px;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
     font-size: 13px;
@@ -279,10 +393,11 @@ body, html {
 
 .popup-header {
     font-weight: 600;
-    margin-bottom: 8px;
+    margin-bottom: 10px;
     color: #333;
     border-bottom: 1px solid #eee;
-    padding-bottom: 6px;
+    padding-bottom: 8px;
+    font-size: 14px;
 }
 
 .popup-row {
@@ -296,47 +411,21 @@ body, html {
 }
 
 .popup-btn {
-    margin-top: 8px;
-    padding: 6px 12px;
+    margin-top: 10px;
+    padding: 8px 14px;
     background: #4285f4;
     color: white;
     border: none;
-    border-radius: 4px;
+    border-radius: 6px;
     cursor: pointer;
     font-size: 12px;
     width: 100%;
     transition: background 0.2s;
+    font-weight: 500;
 }
 
 .popup-btn:hover {
     background: #3367d6;
-}
-
-/* ======================================================================
-   レスポンシブ対応
-   ====================================================================== */
-@media (max-width: 768px) {
-    #search-panel {
-        width: calc(100vw - 30px);
-        left: 15px;
-        transform: none;
-    }
-    
-    #search-input {
-        width: calc(100% - 90px);
-    }
-    
-    #layer-control {
-        width: calc(100vw - 30px);
-        top: 70px;
-    }
-    
-    #clear-pins {
-        right: 10px;
-        bottom: 10px;
-        font-size: 12px;
-        padding: 10px 12px;
-    }
 }
 
 /* ======================================================================
@@ -348,14 +437,180 @@ body, html {
 
 #layer-control::-webkit-scrollbar-track {
     background: #f1f1f1;
-    border-radius: 10px;
 }
 
 #layer-control::-webkit-scrollbar-thumb {
     background: #ccc;
-    border-radius: 10px;
+    border-radius: 4px;
 }
 
 #layer-control::-webkit-scrollbar-thumb:hover {
     background: #999;
+}
+
+/* ======================================================================
+   MapLibre コントロール調整
+   ====================================================================== */
+.maplibregl-ctrl-bottom-right {
+    bottom: 16px;
+    right: 16px;
+}
+
+.maplibregl-ctrl-bottom-left {
+    bottom: 16px;
+    left: 16px;
+}
+
+/* ======================================================================
+   レスポンシブ対応（スマホ: 768px以下）
+   ====================================================================== */
+@media (max-width: 768px) {
+    /* 検索バー */
+    #search-bar {
+        top: 12px;
+        left: 12px;
+        right: 12px;
+        width: auto;
+        max-width: none;
+        transform: none;
+        height: 44px;
+        padding: 0 10px;
+    }
+
+    #search-input {
+        font-size: 15px;
+    }
+
+    #search-btn {
+        padding: 6px 12px;
+        font-size: 13px;
+    }
+
+    /* メニューアイコンを右上へ移動 */
+    #menu-toggle {
+        top: 70px;
+        left: auto;
+        right: 12px;
+        width: 44px;
+        height: 44px;
+        font-size: 22px;
+    }
+
+    /* ピン削除ボタン */
+    .clear-pins-btn {
+        right: 12px;
+        bottom: 100px;
+        width: 44px;
+        height: 44px;
+    }
+
+    /* レイヤーパネル → Bottom Sheet */
+    .layer-panel {
+        position: fixed;
+        top: auto;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        width: 100%;
+        max-width: none;
+        height: 70vh;
+        max-height: 70vh;
+        border-radius: 16px 16px 0 0;
+        transform: translateY(100%);
+        transition: transform 0.3s ease;
+    }
+
+    .layer-panel.active {
+        transform: translateY(0);
+    }
+
+    .layer-panel.hidden {
+        transform: translateY(100%);
+        opacity: 1;
+    }
+
+    /* ドラッグハンドル表示 */
+    .drag-handle {
+        display: block;
+        width: 40px;
+        height: 5px;
+        background: #ccc;
+        border-radius: 3px;
+        margin: 12px auto 8px;
+    }
+
+    #layer-control {
+        max-height: calc(70vh - 60px);
+    }
+
+    #layer-control h3 {
+        font-size: 16px;
+        padding: 14px 16px;
+    }
+
+    /* オーバーレイ表示 */
+    .panel-overlay.active {
+        display: block;
+    }
+
+    /* セクション・項目の調整 */
+    .pref-select-container,
+    .section-header,
+    .section-content {
+        padding-left: 16px;
+        padding-right: 16px;
+    }
+
+    .layer-item {
+        margin-bottom: 14px;
+    }
+
+    .layer-item input[type="checkbox"] {
+        width: 20px;
+        height: 20px;
+    }
+
+    .layer-item label {
+        font-size: 15px;
+    }
+
+    .opacity-slider input[type="range"] {
+        height: 8px;
+    }
+
+    .opacity-slider input[type="range"]::-webkit-slider-thumb {
+        width: 22px;
+        height: 22px;
+    }
+
+    .opacity-slider input[type="range"]::-moz-range-thumb {
+        width: 22px;
+        height: 22px;
+    }
+
+    /* MapLibre コントロール調整 */
+    .maplibregl-ctrl-bottom-right {
+        bottom: 12px;
+        right: 12px;
+    }
+
+    .maplibregl-ctrl-bottom-left {
+        bottom: 12px;
+        left: 12px;
+    }
+}
+
+/* ======================================================================
+   iOS Safari safe-area対応
+   ====================================================================== */
+@supports (padding: env(safe-area-inset-bottom)) {
+    @media (max-width: 768px) {
+        .layer-panel {
+            padding-bottom: env(safe-area-inset-bottom);
+        }
+
+        .clear-pins-btn {
+            bottom: calc(100px + env(safe-area-inset-bottom));
+        }
+    }
 }
