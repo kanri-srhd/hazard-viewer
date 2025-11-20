@@ -56,6 +56,55 @@
       0%, 100% { opacity: 0.9; }
       50% { opacity: 0.6; }
     }
+    
+    /* 検索バー */
+    #search-bar {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      z-index: 1000;
+      background: white;
+      border-radius: 8px;
+      padding: 8px 12px;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.15);
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+    
+    #global-search-input {
+      width: 280px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      padding: 8px 12px;
+      font-size: 14px;
+      outline: none;
+      transition: border 0.2s;
+    }
+    
+    #global-search-input:focus {
+      border-color: #4285f4;
+    }
+    
+    #global-search-btn {
+      background: #4285f4;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      padding: 8px 16px;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    
+    #global-search-btn:hover {
+      background: #3367d6;
+    }
+    
+    #global-search-btn:active {
+      background: #2851a3;
+    }
   </style>
 </head>
 
@@ -63,6 +112,12 @@
 
   <!-- Map container -->
   <div id="map"></div>
+
+  <!-- 検索バー -->
+  <div id="search-bar">
+    <input id="global-search-input" type="text" placeholder="住所・地番・座標を入力" />
+    <button id="global-search-btn">🔍 検索</button>
+  </div>
 
   <!-- ローディングインジケータ -->
   <div id="hazard-loading">🔄 ハザードデータ読み込み中...</div>

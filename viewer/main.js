@@ -6,6 +6,7 @@
 
 import { detectPrefCodeFromLonLat } from './utils/prefDetect.js';
 import { setPrefCode } from './layers/hazard.js';
+import { parseInput } from './utils/geocode.js';
 
 // ------------------------------
 // MapLibre の初期設定
@@ -47,6 +48,95 @@ map.addControl(new maplibregl.ScaleControl({
     maxWidth: 200,
     unit: "metric"
 }), 'bottom-left');
+
+// ======================================================
+//  検索マーカー管理
+// ======================================================
+let searchMarker = null;  // 検索結果のマーカー
+
+function addSearchMarker(lng, lat) {
+    // 既存のマーカーを削除
+    if (searchMarker) {
+        searchMarker.remove();
+        searchMarker = null;
+    }
+    
+    // 新しいマーカーを作成
+    searchMarker = new maplibregl.Marker({
+        color: '#EA4335'  // Google Maps ライクな赤
+    })
+        .setLngLat([lng, lat])
+        .addTo(map);
+    
+    console.log(`[main] ✓ Search marker added at [${lng}, ${lat}]`);
+}
+
+// ======================================================
+//  検索機能
+// ======================================================
+async function executeSearch() {
+    const input = document.getElementById('global-search-input');
+    const query = input?.value?.trim();
+    
+    if (!query) {
+        console.warn('[main] Empty search query');
+        return;
+    }
+    
+    console.log(`[main] Search query: "${query}"`);
+    
+    try {
+        // 入力を解析して座標取得
+        const result = await parseInput(query);
+        
+        if (!result) {
+            console.error('[main] ✗ Search failed: no results');
+            alert('検索結果が見つかりませんでした。\n住所・地番・座標を確認してください。');
+            return;
+        }
+        
+        const { lng, lat, title } = result;
+        
+        console.log(`[main] ✓ Search result: [${lng}, ${lat}]${title ? ` "${title}"` : ''}`);
+        
+        // 地図を移動（アニメーション付き）
+        map.flyTo({
+            center: [lng, lat],
+            zoom: 17,
+            duration: 2000
+        });
+        
+        // マーカーを設置
+        addSearchMarker(lng, lat);
+        
+    } catch (error) {
+        console.error('[main] ✗ Search error:', error);
+        alert('検索中にエラーが発生しました。');
+    }
+}
+
+// 検索ボタンクリック
+document.addEventListener('DOMContentLoaded', () => {
+    const searchBtn = document.getElementById('global-search-btn');
+    const searchInput = document.getElementById('global-search-input');
+    
+    if (searchBtn) {
+        searchBtn.addEventListener('click', () => {
+            console.log('[main] Search button clicked');
+            executeSearch();
+        });
+    }
+    
+    // Enter キーで検索
+    if (searchInput) {
+        searchInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                console.log('[main] Enter key pressed');
+                executeSearch();
+            }
+        });
+    }
+});
 
 // ======================================================
 //  地図移動時の都道府県自動判定
