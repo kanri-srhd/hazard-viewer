@@ -1,21 +1,63 @@
 // ======================================================================
-// viewer/main.js - Google Maps風UI + スマホ全画面対応版
+// viewer/main.js - Google Maps完全模倣UI + SVGアイコンテーマ
 // 
 // 機能:
 // - Google Maps風 UI コンポーネント
 // - ズームボタン（＋/－）
 // - 現在地ボタン（GeolocateControl）
-// - スケールコントロール
+// - スケールコントロール（中央下部配置）
 // - レイヤーパネル（PC: Drawer / スマホ: Bottom Sheet）
 // - 赤ピン（検索結果）/ 青ピン（クリック地点）with Popup
 // - 都道府県ポリゴン判定による自動県コード更新
 // - ハザードレイヤー動的切替（キャッシュ高速化）
+// - Google Maps風SVGアイコンセット
 // ======================================================================
 
 import { detectPrefecture } from "./utils/prefDetect.js";
 import { initializeHazardLayers, setPrefCode, toggleHazard } from "./layers/hazard.js";
 import { parseInput } from "./utils/geocode.js";
 import { createLayerToggleUI, adjustPanelSize } from "./layers/ui.js";
+
+// ======================================================================
+// Google Maps風 SVGアイコン定義
+// ======================================================================
+
+const SVG_ICONS = {
+    search: `<svg width="24" height="24" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="11" cy="11" r="7" stroke="#5f6368" stroke-width="2" fill="none"/>
+        <path d="M16 16l5 5" stroke="#5f6368" stroke-width="2" stroke-linecap="round"/>
+    </svg>`,
+    
+    menu: `<svg width="24" height="24" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+        <path d="M4 7h16M4 12h16M4 17h16" stroke="#5f6368" stroke-width="2" stroke-linecap="round" fill="none"/>
+    </svg>`,
+    
+    zoomIn: `<svg width="24" height="24" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+        <path d="M12 5v14M5 12h14" stroke="#5f6368" stroke-width="2" stroke-linecap="round" fill="none"/>
+    </svg>`,
+    
+    zoomOut: `<svg width="24" height="24" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+        <path d="M5 12h14" stroke="#5f6368" stroke-width="2" stroke-linecap="round" fill="none"/>
+    </svg>`,
+    
+    locate: `<svg width="24" height="24" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="12" cy="12" r="3" stroke="#5f6368" stroke-width="2" fill="none"/>
+        <path d="M12 2v4M12 18v4M2 12h4M18 12h4" stroke="#5f6368" stroke-width="2" stroke-linecap="round"/>
+    </svg>`,
+    
+    trash: `<svg width="24" height="24" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+        <path d="M3 6h18M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2" stroke="#5f6368" stroke-width="2" stroke-linecap="round" fill="none"/>
+        <path d="M19 6v12a2 2 0 01-2 2H7a2 2 0 01-2-2V6" stroke="#5f6368" stroke-width="2" stroke-linecap="round" fill="none"/>
+        <path d="M10 11v6M14 11v6" stroke="#5f6368" stroke-width="2" stroke-linecap="round"/>
+    </svg>`
+};
+
+/**
+ * SVG文字列をdata URI形式に変換
+ */
+function svgToDataUri(svgString) {
+    return `data:image/svg+xml;base64,${btoa(svgString)}`;
+}
 
 // ======================================================================
 // 定数
@@ -138,18 +180,47 @@ map.on("load", () => {
 
 function addGoogleMapsStyleControls() {
     // --------------------------------------------------
+    // SVGアイコンを各ボタンに適用
+    // --------------------------------------------------
+    const searchIcon = document.getElementById("search-icon");
+    if (searchIcon) {
+        const img = document.createElement("img");
+        img.src = svgToDataUri(SVG_ICONS.search);
+        img.alt = "🔍";
+        searchIcon.appendChild(img);
+    }
+
+    const menuBtn = document.getElementById("menu-toggle");
+    if (menuBtn) {
+        const img = document.createElement("img");
+        img.src = svgToDataUri(SVG_ICONS.menu);
+        img.alt = "☰";
+        menuBtn.appendChild(img);
+    }
+
+    // --------------------------------------------------
     // 手動ズームボタン（#map-controls内の + / -）
     // --------------------------------------------------
     const zoomInBtn = document.getElementById("zoom-in");
     const zoomOutBtn = document.getElementById("zoom-out");
 
     if (zoomInBtn) {
+        const img = document.createElement("img");
+        img.src = svgToDataUri(SVG_ICONS.zoomIn);
+        img.alt = "+";
+        zoomInBtn.appendChild(img);
+        
         zoomInBtn.addEventListener("click", () => {
             map.zoomIn({ duration: 300 });
         });
     }
 
     if (zoomOutBtn) {
+        const img = document.createElement("img");
+        img.src = svgToDataUri(SVG_ICONS.zoomOut);
+        img.alt = "−";
+        zoomOutBtn.appendChild(img);
+        
         zoomOutBtn.addEventListener("click", () => {
             map.zoomOut({ duration: 300 });
         });
@@ -159,6 +230,13 @@ function addGoogleMapsStyleControls() {
     // 現在地ボタン（#geolocate）
     // --------------------------------------------------
     const geolocateBtn = document.getElementById("geolocate");
+    
+    if (geolocateBtn) {
+        const img = document.createElement("img");
+        img.src = svgToDataUri(SVG_ICONS.locate);
+        img.alt = "📍";
+        geolocateBtn.appendChild(img);
+    }
     
     // GeolocateControlをプログラムから操作するために保持
     const geolocateControl = new maplibregl.GeolocateControl({
@@ -187,7 +265,18 @@ function addGoogleMapsStyleControls() {
     }
 
     // --------------------------------------------------
-    // スケールコントロール（左下）
+    // ピン削除ボタン（#clear-pins）
+    // --------------------------------------------------
+    const clearPinsBtn = document.getElementById("clear-pins");
+    if (clearPinsBtn) {
+        const img = document.createElement("img");
+        img.src = svgToDataUri(SVG_ICONS.trash);
+        img.alt = "🗑";
+        clearPinsBtn.appendChild(img);
+    }
+
+    // --------------------------------------------------
+    // スケールコントロール（中央下部）
     // --------------------------------------------------
     const scale = new maplibregl.ScaleControl({
         maxWidth: 100,
@@ -195,7 +284,7 @@ function addGoogleMapsStyleControls() {
     });
     map.addControl(scale, "bottom-left");
 
-    console.log("[main.js] Google Maps-style manual controls added");
+    console.log("[main.js] Google Maps-style SVG controls added");
 }
 
 // ======================================================================
@@ -467,4 +556,4 @@ window.clearAllPins = () => {
     userMarker = null;
 };
 
-console.log("[main.js] Google Maps風UI + スマホ全画面対応版ロード完了");
+console.log("[main.js] Google Maps完全模倣UI + SVGアイコンテーマ ロード完了");

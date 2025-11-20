@@ -32,15 +32,13 @@ if ('serviceWorker' in navigator) {
 
 <!-- Google Maps風 検索バー -->
 <div id="search-bar">
-  <span class="search-icon">🔍</span>
+  <span class="search-icon" id="search-icon"></span>
   <input id="search-input" type="text" placeholder="住所、地番、座標を検索" autocomplete="off" />
   <button id="search-btn">検索</button>
 </div>
 
 <!-- メニューアイコン（≡） - Google Maps風 -->
-<button id="menu-toggle" class="gmaps-btn" aria-label="レイヤーメニュー">
-  <span class="menu-icon">☰</span>
-</button>
+<button id="menu-toggle" class="gmaps-btn" aria-label="レイヤーメニュー"></button>
 
 <!-- レイヤーパネル（PC: Drawer / Mobile: Bottom Sheet） -->
 <div id="layer-panel" class="layer-panel">
@@ -53,10 +51,10 @@ if ('serviceWorker' in navigator) {
 
 <!-- Google Maps風 右下ボタン群 -->
 <div id="map-controls">
-  <button id="zoom-in" class="gmaps-btn" aria-label="ズームイン" title="ズームイン">+</button>
-  <button id="zoom-out" class="gmaps-btn" aria-label="ズームアウト" title="ズームアウト">−</button>
-  <button id="geolocate" class="gmaps-btn" aria-label="現在地" title="現在地">📍</button>
-  <button id="clear-pins" class="gmaps-btn" aria-label="ピン削除" title="ピン削除">🗑</button>
+  <button id="zoom-in" class="gmaps-btn" aria-label="ズームイン" title="ズームイン"></button>
+  <button id="zoom-out" class="gmaps-btn" aria-label="ズームアウト" title="ズームアウト"></button>
+  <button id="geolocate" class="gmaps-btn" aria-label="現在地" title="現在地"></button>
+  <button id="clear-pins" class="gmaps-btn" aria-label="ピン削除" title="ピン削除"></button>
 </div>
 
 <!-- GSIクレジット -->
@@ -64,6 +62,6 @@ if ('serviceWorker' in navigator) {
   <a href="https://maps.gsi.go.jp/" target="_blank" rel="noopener">© 国土地理院</a>
 </div>
 
-<script type="module" src="./main.js?v=20251120-05"></script>
+<script type="module" src="./main.js?v=20251120-06"></script>
 </body>
 </html>

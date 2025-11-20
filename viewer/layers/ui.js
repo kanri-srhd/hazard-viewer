@@ -1,5 +1,5 @@
 // ======================================================================
-// viewer/layers/ui.js - Google Maps完全模倣UI + スマホ全画面対応版
+// viewer/layers/ui.js - Google Maps完全模倣UI + SVGアイコンテーマ
 // 
 // 機能:
 // - PC: 左スライドイン Drawer
@@ -10,10 +10,41 @@
 // - レスポンシブ自動判定
 // - カテゴリー順序: 地番 → ハザード → 電力 → 地図
 // - 都道府県セレクトUIを完全削除
+// - Google Maps風SVGアイコンセット
 // ======================================================================
 
 let isPanelOpen = false;
 let isMobile = false;
+
+// ======================================================================
+// Google Maps風 SVGアイコン定義
+// ======================================================================
+
+const SVG_ICONS = {
+    menu: `<svg width="24" height="24" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+        <path d="M4 7h16M4 12h16M4 17h16" stroke="#5f6368" stroke-width="2" stroke-linecap="round" fill="none"/>
+    </svg>`,
+    
+    chevronDown: `<svg width="24" height="24" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+        <path d="M6 9l6 6 6-6" stroke="#5f6368" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+    </svg>`,
+    
+    layers: `<svg width="24" height="24" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+        <path d="M12 2L2 7l10 5 10-5-10-5z" stroke="#5f6368" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+        <path d="M2 17l10 5 10-5M2 12l10 5 10-5" stroke="#5f6368" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+    </svg>`,
+    
+    close: `<svg width="24" height="24" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+        <path d="M18 6L6 18M6 6l12 12" stroke="#5f6368" stroke-width="2" stroke-linecap="round" fill="none"/>
+    </svg>`
+};
+
+/**
+ * SVG文字列をdata URI形式に変換
+ */
+function svgToDataUri(svgString) {
+    return `data:image/svg+xml;base64,${btoa(svgString)}`;
+}
 
 /**
  * レイヤートグルUI生成（Google Maps風 + スマホ対応）
@@ -254,10 +285,20 @@ function createSection(title, items, map, hasOpacity) {
     // セクションヘッダー
     const header = document.createElement("div");
     header.className = "section-header";
-    header.innerHTML = `
-        <span>${title}</span>
-        <span class="toggle-arrow">▼</span>
-    `;
+    
+    const titleSpan = document.createElement("span");
+    titleSpan.className = "section-title";
+    titleSpan.textContent = title;
+    
+    const arrowSpan = document.createElement("span");
+    arrowSpan.className = "toggle-arrow";
+    const arrowImg = document.createElement("img");
+    arrowImg.src = svgToDataUri(SVG_ICONS.chevronDown);
+    arrowImg.alt = "▼";
+    arrowSpan.appendChild(arrowImg);
+    
+    header.appendChild(titleSpan);
+    header.appendChild(arrowSpan);
 
     // セクションコンテンツ
     const content = document.createElement("div");

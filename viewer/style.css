@@ -1,5 +1,5 @@
 /* ======================================================================
-   viewer/style.css - Google Maps完全模倣UI + スマホ全画面対応版
+   viewer/style.css - Google Maps完全模倣UI + SVGアイコンテーマ
    ====================================================================== */
 
 /* ======================================================================
@@ -32,7 +32,6 @@ body, html {
     outline: none;
 }
 
-/* マップの傾き・回転を無効化 */
 .maplibregl-canvas {
     touch-action: pan-x pan-y;
 }
@@ -63,10 +62,19 @@ body, html {
 }
 
 .search-icon {
-    font-size: 20px;
     margin-right: 12px;
     color: #5f6368;
     user-select: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
+}
+
+.search-icon img {
+    width: 100%;
+    height: 100%;
 }
 
 #search-input {
@@ -115,13 +123,6 @@ body, html {
     z-index: 2100;
 }
 
-.menu-icon {
-    font-size: 20px;
-    line-height: 1;
-    font-weight: 300;
-    color: #5f6368;
-}
-
 /* ======================================================================
    Google Maps風 丸ボタン（共通スタイル）
    ====================================================================== */
@@ -136,12 +137,10 @@ body, html {
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 18px;
-    font-weight: 500;
-    color: #5f6368;
     transition: all 0.2s ease;
     user-select: none;
     z-index: 3000;
+    padding: 0;
 }
 
 .gmaps-btn:hover {
@@ -152,6 +151,11 @@ body, html {
 .gmaps-btn:active {
     transform: scale(0.95);
     box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+.gmaps-btn img {
+    width: 20px;
+    height: 20px;
 }
 
 /* ======================================================================
@@ -165,19 +169,6 @@ body, html {
     display: flex;
     flex-direction: column;
     gap: 8px;
-}
-
-#zoom-in, #zoom-out {
-    font-size: 24px;
-    line-height: 1;
-}
-
-#geolocate {
-    font-size: 16px;
-}
-
-#clear-pins {
-    font-size: 16px;
 }
 
 /* ======================================================================
@@ -206,11 +197,13 @@ body, html {
 }
 
 /* ======================================================================
-   MapLibre ScaleControl 位置調整
+   MapLibre ScaleControl - 中央下部配置
    ====================================================================== */
 .maplibregl-ctrl-bottom-left {
-    bottom: 10px;
-    left: 10px;
+    bottom: 20px !important;
+    left: 50% !important;
+    transform: translateX(-50%);
+    right: auto !important;
 }
 
 .maplibregl-ctrl-scale {
@@ -221,6 +214,7 @@ body, html {
     padding: 2px 6px;
     font-size: 11px;
     color: #5f6368;
+    margin: 0;
 }
 
 /* ======================================================================
@@ -312,9 +306,17 @@ body, html {
 }
 
 .section-header .toggle-arrow {
-    font-size: 12px;
-    color: #5f6368;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 16px;
+    height: 16px;
     transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.section-header .toggle-arrow img {
+    width: 100%;
+    height: 100%;
 }
 
 .section-header.collapsed .toggle-arrow {
@@ -515,7 +517,6 @@ body, html {
    レスポンシブ対応（スマホ: 768px以下）
    ====================================================================== */
 @media (max-width: 768px) {
-    /* 検索バー */
     #search-bar {
         top: 8px;
         left: 8px;
@@ -537,7 +538,6 @@ body, html {
         font-size: 13px;
     }
 
-    /* メニューアイコンを右上へ移動 */
     #menu-toggle {
         top: 60px;
         left: auto;
@@ -546,11 +546,6 @@ body, html {
         height: 44px;
     }
 
-    .menu-icon {
-        font-size: 22px;
-    }
-
-    /* 右下ボタン群 */
     #map-controls {
         right: 8px;
         bottom: 70px;
@@ -560,31 +555,23 @@ body, html {
     .gmaps-btn {
         width: 44px;
         height: 44px;
-        font-size: 20px;
     }
 
-    #zoom-in, #zoom-out {
-        font-size: 26px;
+    .gmaps-btn img {
+        width: 22px;
+        height: 22px;
     }
 
-    #geolocate, #clear-pins {
-        font-size: 18px;
-    }
-
-    /* GSIクレジット */
     #gsi-credit {
         right: 8px;
         bottom: 8px;
         font-size: 10px;
     }
 
-    /* ScaleControl */
     .maplibregl-ctrl-bottom-left {
-        bottom: 8px;
-        left: 8px;
+        bottom: 90px !important;
     }
 
-    /* レイヤーパネル → Bottom Sheet */
     .layer-panel {
         position: fixed;
         top: auto;
@@ -609,7 +596,6 @@ body, html {
         opacity: 1;
     }
 
-    /* ドラッグハンドル表示 */
     .drag-handle {
         display: block;
         width: 40px;
@@ -628,12 +614,10 @@ body, html {
         padding: 14px 16px;
     }
 
-    /* オーバーレイ表示 */
     .panel-overlay.active {
         display: block;
     }
 
-    /* セクション・項目の調整 */
     .section-header {
         padding: 14px 16px;
     }
@@ -692,7 +676,7 @@ body, html {
         }
 
         .maplibregl-ctrl-bottom-left {
-            bottom: calc(8px + env(safe-area-inset-bottom));
+            bottom: calc(90px + env(safe-area-inset-bottom)) !important;
         }
     }
 }
