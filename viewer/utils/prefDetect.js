@@ -63,7 +63,8 @@ const PREF_NAME_TO_CODE = {
 export async function detectPrefCodeFromLonLat(lon, lat) {
     try {
         // GSI 住所検索API（逆ジオコーディング）- 正しいフォーマット: q=lon,lat
-        const url = `https://msearch.gsi.go.jp/address-search/AddressSearch?q=${lon},${lat}`;
+        // ★重要: 座標は小数点6桁以上必要
+        const url = `https://msearch.gsi.go.jp/address-search/AddressSearch?q=${lon.toFixed(6)},${lat.toFixed(6)}`;
         
         console.log(`[prefDetect] Requesting: ${url}`);
         
@@ -82,7 +83,7 @@ export async function detectPrefCodeFromLonLat(lon, lat) {
             return null;
         }
         
-        // 都道府県名を取得（複数パターンに対応）
+        // 都道府県名を取得（properties.title から抽出）
         const firstResult = data[0];
         const address = firstResult.properties?.title || 
                        firstResult.properties?.address || 

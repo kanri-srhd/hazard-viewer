@@ -50,16 +50,21 @@ map.addControl(new maplibregl.ScaleControl({
 
 // ======================================================
 //  地図移動時の都道府県自動判定
+//  ★ detectPrefCodeFromLonLat は必ず await すること
+//  ★ setPrefCode も必ず await すること
 // ======================================================
 let moveEndTimer = null;
-let isAutoDetecting = false;  // 自動判定中フラグ
+let isAutoDetecting = false;  // 自動判定中フラグ（重複実行防止）
 
-map.on('moveend', async () => {
+map.on('moveend', () => {
     clearTimeout(moveEndTimer);
     
     // デバウンス: 移動停止後800ms後に判定
     moveEndTimer = setTimeout(async () => {
-        if (isAutoDetecting) return;  // 重複実行防止
+        if (isAutoDetecting) {
+            console.log('[main] Auto-detection already in progress, skipping...');
+            return;
+        }
         
         isAutoDetecting = true;
         
@@ -67,14 +72,14 @@ map.on('moveend', async () => {
         const lon = center.lng;
         const lat = center.lat;
         
-        console.log(`[main] Map center: [${lon.toFixed(4)}, ${lat.toFixed(4)}]`);
+        console.log(`[main] Map moveend: center = [${lon.toFixed(6)}, ${lat.toFixed(6)}]`);
         
         try {
-            // 都道府県コード判定
+            // ★ 都道府県コード判定（必ず await）
             const prefCode = await detectPrefCodeFromLonLat(lon, lat);
             
             if (prefCode !== null) {
-                console.log(`[main] Detected prefecture: ${prefCode}`);
+                console.log(`[main] ✓ Detected prefecture code: ${prefCode}`);
                 
                 // UI のセレクトボックスを更新（ui.js が追加する #pref-select）
                 const prefSelect = document.getElementById('pref-select');
@@ -84,15 +89,24 @@ map.on('moveend', async () => {
                     
                     // 値が変わった場合のみ更新
                     if (currentValue !== newValue) {
+                        console.log(`[main] Updating prefecture: ${currentValue} → ${newValue}`);
                         prefSelect.value = newValue;
                         
-                        // ハザードレイヤーに反映
+                        // ★ ハザードレイヤーに反映（必ず await）
                         await setPrefCode(prefCode);
+                    } else {
+                        console.log(`[main] Prefecture unchanged: ${prefCode}`);
                     }
+                } else {
+                    // UI未初期化の場合も setPrefCode を呼ぶ
+                    console.log(`[main] #pref-select not found, calling setPrefCode anyway`);
+                    await setPrefCode(prefCode);
                 }
+            } else {
+                console.log('[main] ✗ No prefecture detected (outside Japan or API error)');
             }
         } catch (error) {
-            console.error('[main] Error in prefecture detection:', error);
+            console.error('[main] ✗ Error in prefecture detection:', error);
         } finally {
             isAutoDetecting = false;
         }
