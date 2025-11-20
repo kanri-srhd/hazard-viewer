@@ -2,6 +2,7 @@
 //  main.js
 //  全国ハザード × 地番 × 送電網 × 空き容量 統合ビューア
 //  初期化コード（地理院タイル + レイヤーローダー）
+//  建物 centroid 検索 + ピン管理
 // ======================================================
 
 import { detectPrefCodeFromLonLat } from './utils/prefDetect.js';
@@ -56,42 +57,87 @@ map.addControl(new maplibregl.ScaleControl({
 let searchMarker = null;  // 検索結果のマーカー（赤）
 let userMarker = null;    // ユーザークリックのマーカー（青）
 
+// 検索マーカー追加（赤ピン）
 function addSearchMarker(lng, lat) {
     // 既存の検索マーカーを削除
-    if (searchMarker) {
-        searchMarker.remove();
-        searchMarker = null;
-    }
+    removeSearchMarker();
     
     // 新しい検索マーカーを作成（赤）
+    const el = document.createElement('div');
+    el.style.width = '30px';
+    el.style.height = '30px';
+    el.style.cursor = 'pointer';
+    
     searchMarker = new maplibregl.Marker({
-        color: '#EA4335'  // Google Maps ライクな赤
+        element: el,
+        color: '#EA4335'
     })
         .setLngLat([lng, lat])
         .addTo(map);
+    
+    // 右クリックで削除
+    el.addEventListener('contextmenu', (e) => {
+        e.preventDefault();
+        removeSearchMarker();
+        console.log('[main] Search marker removed (right-click)');
+    });
     
     console.log(`[main] ✓ Search marker (red) added at [${lng}, ${lat}]`);
 }
 
+// ユーザーマーカー追加（青ピン）
 function addUserMarker(lng, lat) {
     // 既存のユーザーマーカーを削除
-    if (userMarker) {
-        userMarker.remove();
-        userMarker = null;
-    }
+    removeUserMarker();
     
     // 新しいユーザーマーカーを作成（青）
+    const el = document.createElement('div');
+    el.style.width = '30px';
+    el.style.height = '30px';
+    el.style.cursor = 'pointer';
+    
     userMarker = new maplibregl.Marker({
-        color: '#4285F4'  // 青
+        element: el,
+        color: '#4285F4'
     })
         .setLngLat([lng, lat])
         .addTo(map);
     
+    // 右クリックで削除
+    el.addEventListener('contextmenu', (e) => {
+        e.preventDefault();
+        removeUserMarker();
+        console.log('[main] User marker removed (right-click)');
+    });
+    
     console.log(`[main] ✓ User marker (blue) added at [${lng}, ${lat}]`);
 }
 
+// 検索マーカー削除
+function removeSearchMarker() {
+    if (searchMarker) {
+        searchMarker.remove();
+        searchMarker = null;
+    }
+}
+
+// ユーザーマーカー削除
+function removeUserMarker() {
+    if (userMarker) {
+        userMarker.remove();
+        userMarker = null;
+    }
+}
+
+// 両方のマーカーを削除
+function clearAllMarkers() {
+    removeSearchMarker();
+    removeUserMarker();
+    console.log('[main] All markers cleared');
+}
+
 // ======================================================
-//  検索機能（住所検索 → 建物 centroid 探索）
+//  検索機能（住所検索 → 建物 centroid のみにピン）
 // ======================================================
 async function executeSearch() {
     const input = document.getElementById('global-search-input');
@@ -104,42 +150,52 @@ async function executeSearch() {
     
     console.log(`[main] Search query: "${query}"`);
     
+    // 既存の検索マーカーを削除
+    removeSearchMarker();
+    
     try {
-        // ① 入力を解析して座標取得
-        const result = await parseInput(query);
+        // ① 入力を解析して座標取得（geocode）
+        const geocodeResult = await parseInput(query);
         
-        if (!result) {
-            console.error('[main] ✗ Search failed: no results');
-            alert('検索結果が見つかりませんでした。\n住所・地番・座標を確認してください。');
+        if (!geocodeResult) {
+            console.error('[main] ✗ Geocode failed');
+            alert('検索結果が見つかりませんでした。');
             return;
         }
         
-        let finalLng = result.lng;
-        let finalLat = result.lat;
-        const { title, needsBuildingSearch } = result;
+        const { lng, lat } = geocodeResult;
+        console.log(`[main] ✓ Geocode result: [${lng}, ${lat}]`);
         
-        console.log(`[main] ✓ Geocode result: [${finalLng}, ${finalLat}]${title ? ` "${title}"` : ''}`);
+        // ② 建物 centroid を探す
+        console.log('[main] Searching for nearest building centroid...');
+        const buildingCentroid = await findNearestBuildingCentroid(lng, lat);
         
-        // ② 住所/地番検索の場合は建物 centroid を探す
-        if (needsBuildingSearch) {
-            console.log('[main] Searching for nearest building centroid...');
-            const buildingResult = await findNearestBuildingCentroid(finalLng, finalLat);
-            finalLng = buildingResult.lng;
-            finalLat = buildingResult.lat;
-            console.log(`[main] ✓ Final coordinates (building centroid): [${finalLng}, ${finalLat}]`);
-        } else {
-            console.log('[main] Direct coordinate input, skipping building search');
+        if (!buildingCentroid) {
+            // 建物が見つからない場合
+            console.warn('[main] No building found');
+            
+            // map.flyTo は実行（ピンは置かない）
+            map.flyTo({
+                center: [lng, lat],
+                zoom: 18,
+                duration: 2000
+            });
+            
+            alert('建物が見つかりませんでした。\n地図を移動します。');
+            return;
         }
         
-        // ③ 地図を移動（アニメーション付き、zoom: 18）
+        console.log(`[main] ✓ Building centroid: [${buildingCentroid.lng}, ${buildingCentroid.lat}]`);
+        
+        // ③ 地図を建物 centroid に移動
         map.flyTo({
-            center: [finalLng, finalLat],
+            center: [buildingCentroid.lng, buildingCentroid.lat],
             zoom: 18,
             duration: 2000
         });
         
-        // ④ 検索マーカーを設置（赤）
-        addSearchMarker(finalLng, finalLat);
+        // ④ 検索マーカーを建物 centroid に設置（赤）
+        addSearchMarker(buildingCentroid.lng, buildingCentroid.lat);
         
     } catch (error) {
         console.error('[main] ✗ Search error:', error);
@@ -147,11 +203,15 @@ async function executeSearch() {
     }
 }
 
-// 検索ボタンクリック
+// ======================================================
+//  UI イベント設定
+// ======================================================
 document.addEventListener('DOMContentLoaded', () => {
     const searchBtn = document.getElementById('global-search-btn');
     const searchInput = document.getElementById('global-search-input');
+    const clearPinsBtn = document.getElementById('clear-pins-btn');
     
+    // 検索ボタン
     if (searchBtn) {
         searchBtn.addEventListener('click', () => {
             console.log('[main] Search button clicked');
@@ -168,12 +228,27 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
     }
+    
+    // ピン削除ボタン
+    if (clearPinsBtn) {
+        clearPinsBtn.addEventListener('click', () => {
+            console.log('[main] Clear pins button clicked');
+            clearAllMarkers();
+        });
+    }
 });
 
 // ======================================================
 //  マップクリックでユーザーマーカーを設置（青ピン）
 // ======================================================
 map.on('click', (e) => {
+    // Shift + Click で全マーカー削除（裏機能）
+    if (e.originalEvent.shiftKey) {
+        console.log('[main] Shift + Click detected');
+        clearAllMarkers();
+        return;
+    }
+    
     const lng = e.lngLat.lng;
     const lat = e.lngLat.lat;
     
