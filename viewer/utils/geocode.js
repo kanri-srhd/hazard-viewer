@@ -2,6 +2,7 @@
 // geocode.js
 // 住所・地番・座標検索用ユーティリティ
 // GSI 住所検索 API 統合
+// 建物探索指示あり
 // ======================================================
 
 // ------------------------------------------------------
@@ -66,6 +67,7 @@ export function isLatLng(text) {
 // ------------------------------------------------------
 // 3. 入力を解析して座標を返す
 // 座標形式なら parseFloat、それ以外は geocodeAddress
+// ★ 住所/地番検索の場合は needsBuildingSearch: true を返す
 // ------------------------------------------------------
 export async function parseInput(query) {
     const normalized = normalizeQuery(query);
@@ -83,12 +85,20 @@ export async function parseInput(query) {
         
         console.log(`[geocode] parseInput: Detected coordinate [${lng}, ${lat}]`);
         
-        return { lng, lat };
+        // 座標入力の場合は建物検索不要
+        return { lng, lat, needsBuildingSearch: false };
     }
     
     // 住所・地番検索
     console.log(`[geocode] parseInput: Geocoding address/chiban "${normalized}"`);
-    return await geocodeAddress(normalized);
+    const result = await geocodeAddress(normalized);
+    
+    if (result) {
+        // 住所/地番検索の場合は建物検索が必要
+        return { ...result, needsBuildingSearch: true };
+    }
+    
+    return null;
 }
 
 // ------------------------------------------------------

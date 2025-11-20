@@ -57,12 +57,13 @@
       50% { opacity: 0.6; }
     }
     
-    /* 検索バー */
+    /* 検索バー（画面上中央） */
     #search-bar {
       position: absolute;
-      top: 10px;
-      left: 10px;
-      z-index: 1000;
+      top: 12px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 2000;
       background: white;
       border-radius: 8px;
       padding: 8px 12px;
@@ -73,7 +74,7 @@
     }
     
     #global-search-input {
-      width: 280px;
+      width: 320px;
       border: 1px solid #ddd;
       border-radius: 4px;
       padding: 8px 12px;
@@ -104,6 +105,14 @@
     
     #global-search-btn:active {
       background: #2851a3;
+    }
+    
+    /* レイヤーパネル調整（検索窓を避ける） */
+    #layer-toggle-panel {
+      position: absolute;
+      top: 70px !important;
+      left: 10px;
+      z-index: 1000;
     }
   </style>
 </head>

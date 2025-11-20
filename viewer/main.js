@@ -7,6 +7,7 @@
 import { detectPrefCodeFromLonLat } from './utils/prefDetect.js';
 import { setPrefCode } from './layers/hazard.js';
 import { parseInput } from './utils/geocode.js';
+import { findNearestBuildingCentroid } from './utils/buildingLoader.js';
 
 // ------------------------------
 // MapLibre の初期設定
@@ -50,29 +51,47 @@ map.addControl(new maplibregl.ScaleControl({
 }), 'bottom-left');
 
 // ======================================================
-//  検索マーカー管理
+//  マーカー管理（検索用 & ユーザークリック用）
 // ======================================================
-let searchMarker = null;  // 検索結果のマーカー
+let searchMarker = null;  // 検索結果のマーカー（赤）
+let userMarker = null;    // ユーザークリックのマーカー（青）
 
 function addSearchMarker(lng, lat) {
-    // 既存のマーカーを削除
+    // 既存の検索マーカーを削除
     if (searchMarker) {
         searchMarker.remove();
         searchMarker = null;
     }
     
-    // 新しいマーカーを作成
+    // 新しい検索マーカーを作成（赤）
     searchMarker = new maplibregl.Marker({
         color: '#EA4335'  // Google Maps ライクな赤
     })
         .setLngLat([lng, lat])
         .addTo(map);
     
-    console.log(`[main] ✓ Search marker added at [${lng}, ${lat}]`);
+    console.log(`[main] ✓ Search marker (red) added at [${lng}, ${lat}]`);
+}
+
+function addUserMarker(lng, lat) {
+    // 既存のユーザーマーカーを削除
+    if (userMarker) {
+        userMarker.remove();
+        userMarker = null;
+    }
+    
+    // 新しいユーザーマーカーを作成（青）
+    userMarker = new maplibregl.Marker({
+        color: '#4285F4'  // 青
+    })
+        .setLngLat([lng, lat])
+        .addTo(map);
+    
+    console.log(`[main] ✓ User marker (blue) added at [${lng}, ${lat}]`);
 }
 
 // ======================================================
-//  検索機能
+//  検索機能（住所検索 → 建物 centroid 探索）
 // ======================================================
 async function executeSearch() {
     const input = document.getElementById('global-search-input');
@@ -86,7 +105,7 @@ async function executeSearch() {
     console.log(`[main] Search query: "${query}"`);
     
     try {
-        // 入力を解析して座標取得
+        // ① 入力を解析して座標取得
         const result = await parseInput(query);
         
         if (!result) {
@@ -95,19 +114,32 @@ async function executeSearch() {
             return;
         }
         
-        const { lng, lat, title } = result;
+        let finalLng = result.lng;
+        let finalLat = result.lat;
+        const { title, needsBuildingSearch } = result;
         
-        console.log(`[main] ✓ Search result: [${lng}, ${lat}]${title ? ` "${title}"` : ''}`);
+        console.log(`[main] ✓ Geocode result: [${finalLng}, ${finalLat}]${title ? ` "${title}"` : ''}`);
         
-        // 地図を移動（アニメーション付き）
+        // ② 住所/地番検索の場合は建物 centroid を探す
+        if (needsBuildingSearch) {
+            console.log('[main] Searching for nearest building centroid...');
+            const buildingResult = await findNearestBuildingCentroid(finalLng, finalLat);
+            finalLng = buildingResult.lng;
+            finalLat = buildingResult.lat;
+            console.log(`[main] ✓ Final coordinates (building centroid): [${finalLng}, ${finalLat}]`);
+        } else {
+            console.log('[main] Direct coordinate input, skipping building search');
+        }
+        
+        // ③ 地図を移動（アニメーション付き、zoom: 18）
         map.flyTo({
-            center: [lng, lat],
-            zoom: 17,
+            center: [finalLng, finalLat],
+            zoom: 18,
             duration: 2000
         });
         
-        // マーカーを設置
-        addSearchMarker(lng, lat);
+        // ④ 検索マーカーを設置（赤）
+        addSearchMarker(finalLng, finalLat);
         
     } catch (error) {
         console.error('[main] ✗ Search error:', error);
@@ -136,6 +168,19 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
     }
+});
+
+// ======================================================
+//  マップクリックでユーザーマーカーを設置（青ピン）
+// ======================================================
+map.on('click', (e) => {
+    const lng = e.lngLat.lng;
+    const lat = e.lngLat.lat;
+    
+    console.log(`[main] Map clicked at [${lng}, ${lat}]`);
+    
+    // ユーザーマーカーを設置（青）
+    addUserMarker(lng, lat);
 });
 
 // ======================================================
