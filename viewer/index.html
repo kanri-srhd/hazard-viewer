@@ -31,6 +31,23 @@
       padding: 10px;
       font-size: 14px;
     }
+    
+    /* ローディングインジケータ */
+    #hazard-loading {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      background: rgba(0, 0, 0, 0.8);
+      color: white;
+      padding: 8px 12px;
+      border-radius: 4px;
+      font-size: 13px;
+      z-index: 1000;
+      display: none;
+    }
+    #hazard-loading.visible {
+      display: block;
+    }
   </style>
 </head>
 
@@ -38,6 +55,9 @@
 
   <!-- Map container -->
   <div id="map"></div>
+
+  <!-- ローディングインジケータ -->
+  <div id="hazard-loading">ハザードデータ読み込み中...</div>
 
   <!-- レイヤー切替 UIパネルは ui.js が動的追加 -->
 

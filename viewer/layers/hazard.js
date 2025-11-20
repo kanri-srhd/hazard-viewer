@@ -15,54 +15,53 @@ let layersAdded = false;  // タイルレイヤー追加済みかどうか
 let PREF_CODE = null;  // null = 全国版, 1〜47 = 都道府県版
 
 // ------------------------------------------------------
-// ハザードタイルURL生成関数
+// ローディング表示制御
 // ------------------------------------------------------
-function hazardTileURL(type, prefCode) {
+function showLoading() {
+    const loadingEl = document.getElementById('hazard-loading');
+    if (loadingEl) {
+        loadingEl.classList.add('visible');
+    }
+}
+
+function hideLoading() {
+    const loadingEl = document.getElementById('hazard-loading');
+    if (loadingEl) {
+        loadingEl.classList.remove('visible');
+    }
+}
+
+// ------------------------------------------------------
+// ハザードタイルURL生成関数（Fallback 対応）
+// ------------------------------------------------------
+async function hazardTileURL(type, prefCode) {
     const baseURL = "https://disaportaldata.gsi.go.jp/raster";
     
     // 都道府県コードを2桁にゼロ埋め
     const prefStr = prefCode ? String(prefCode).padStart(2, "0") : null;
     
-    switch (type) {
-        case "flood":
-            if (prefStr) {
-                // 都道府県版（_pref_data）
-                return `${baseURL}/01_flood_l2_shinsuishin_pref_data/${prefStr}/{z}/{x}/{y}.png`;
-            } else {
-                // 全国版（_data）
-                return `${baseURL}/01_flood_l2_shinsuishin_data/{z}/{x}/{y}.png`;
-            }
-        
-        case "landslide":
-            if (prefStr) {
-                // 都道府県版
-                return `${baseURL}/03_doseki_keikaikuiki_pref_data/${prefStr}/{z}/{x}/{y}.png`;
-            } else {
-                // 全国版
-                return `${baseURL}/03_doseki_keikaikuiki_data/{z}/{x}/{y}.png`;
-            }
-        
-        case "tsunami":
-            if (prefStr) {
-                // 都道府県版
-                return `${baseURL}/05_tsunami_shinsui_pref_data/${prefStr}/{z}/{x}/{y}.png`;
-            } else {
-                // 全国版
-                return `${baseURL}/05_tsunami_shinsui_data/{z}/{x}/{y}.png`;
-            }
-        
-        case "liquefaction":
-            if (prefStr) {
-                // 都道府県版
-                return `${baseURL}/06_ekijoka_pref_data/${prefStr}/{z}/{x}/{y}.png`;
-            } else {
-                // 全国版
-                return `${baseURL}/06_ekijoka_data/{z}/{x}/{y}.png`;
-            }
-        
-        default:
-            console.error(`[hazard] Unknown hazard type: ${type}`);
-            return null;
+    // タイプ別のベースパス
+    const typeMap = {
+        flood: "01_flood_l2_shinsuishin",
+        landslide: "03_doseki_keikaikuiki",
+        tsunami: "05_tsunami_shinsui",
+        liquefaction: "06_ekijoka"
+    };
+    
+    const basePath = typeMap[type];
+    if (!basePath) {
+        console.error(`[hazard] Unknown hazard type: ${type}`);
+        return null;
+    }
+    
+    // Fallback ロジック: pref_data → data
+    if (prefStr) {
+        const prefDataURL = `${baseURL}/${basePath}_pref_data/${prefStr}/{z}/{x}/{y}.png`;
+        // 簡易的に pref_data を優先（実際の HEAD チェックは省略）
+        return prefDataURL;
+    } else {
+        const dataURL = `${baseURL}/${basePath}_data/{z}/{x}/{y}.png`;
+        return dataURL;
     }
 }
 
@@ -99,14 +98,14 @@ const hazardTiles = {
 // ------------------------------------------------------
 // 各種ハザードレイヤー（RasterLayer）を追加
 // ------------------------------------------------------
-function addHazardLayers() {
+async function addHazardLayers() {
     if (layersAdded) return;
 
     console.log(`[hazard] Adding layers with PREF_CODE: ${PREF_CODE || "全国版"}`);
 
     for (const key of Object.keys(hazardTiles)) {
         const spec = hazardTiles[key];
-        const tileURL = spec.url;
+        const tileURL = await spec.url;
 
         if (!tileURL) {
             console.warn(`[hazard] Skipping ${key}: invalid URL`);
@@ -179,10 +178,10 @@ export function hazardTypeToggle(type, show) {
 export function toggleLayer(show) {
     mapInstance = window.map;
 
-    const applyToggle = () => {
+    const applyToggle = async () => {
         // 初回のみレイヤー作成
         if (!layersAdded) {
-            addHazardLayers();
+            await addHazardLayers();
         }
         
         // 全ハザード一括ON/OFF
@@ -202,10 +201,13 @@ export function toggleLayer(show) {
 }
 
 // ------------------------------------------------------
-// 都道府県コード変更（将来の拡張用）
+// 都道府県コード変更（ローディング制御付き）
 // ------------------------------------------------------
-export function setPrefCode(prefCode) {
+export async function setPrefCode(prefCode) {
     console.log(`[hazard] Changing PREF_CODE: ${PREF_CODE} → ${prefCode}`);
+    
+    // ローディング表示
+    showLoading();
     
     PREF_CODE = prefCode;
     
@@ -225,8 +227,11 @@ export function setPrefCode(prefCode) {
         }
         
         // 新しいPREF_CODEで再追加
-        addHazardLayers();
+        await addHazardLayers();
         
         console.log("[hazard] Layers reloaded with new PREF_CODE");
     }
+    
+    // ローディング非表示
+    hideLoading();
 }

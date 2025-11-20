@@ -4,6 +4,9 @@
 //  初期化コード（地理院タイル + レイヤーローダー）
 // ======================================================
 
+import { detectPrefCodeFromLonLat } from './utils/prefDetect.js';
+import { setPrefCode } from './layers/hazard.js';
+
 // ------------------------------
 // MapLibre の初期設定
 // ------------------------------
@@ -46,6 +49,40 @@ map.addControl(new maplibregl.ScaleControl({
 }), 'bottom-left');
 
 // ======================================================
+//  地図移動時の都道府県自動判定
+// ======================================================
+let moveEndTimer = null;
+
+map.on('moveend', async () => {
+    clearTimeout(moveEndTimer);
+    
+    // デバウンス: 移動停止後500ms後に判定
+    moveEndTimer = setTimeout(async () => {
+        const center = map.getCenter();
+        const lon = center.lng;
+        const lat = center.lat;
+        
+        console.log(`[main] Map center: [${lon}, ${lat}]`);
+        
+        // 都道府県コード判定
+        const prefCode = await detectPrefCodeFromLonLat(lon, lat);
+        
+        if (prefCode !== null) {
+            console.log(`[main] Detected prefecture: ${prefCode}`);
+            
+            // UI のセレクトボックスを更新（ui.js が追加する #pref-select）
+            const prefSelect = document.getElementById('pref-select');
+            if (prefSelect && prefSelect.value !== String(prefCode)) {
+                prefSelect.value = prefCode;
+            }
+            
+            // ハザードレイヤーに反映
+            setPrefCode(prefCode);
+        }
+    }, 500);
+});
+
+// ======================================================
 //  レイヤーローダー
 // ======================================================
 
@@ -60,7 +97,7 @@ async function loadViewerLayers() {
     // base map (地理院タイルなど)
     await import('./layers/base.js');
 
-    // 各レイヤー（初期状態はOFF）
+    // 各レイヤー
     const hazardLayer = await import('./layers/hazard.js');
     const jibanLayer = await import('./layers/jiban.js');
     const gridLayer = await import('./layers/grid.js');
