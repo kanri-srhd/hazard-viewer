@@ -52,34 +52,51 @@ map.addControl(new maplibregl.ScaleControl({
 //  地図移動時の都道府県自動判定
 // ======================================================
 let moveEndTimer = null;
+let isAutoDetecting = false;  // 自動判定中フラグ
 
 map.on('moveend', async () => {
     clearTimeout(moveEndTimer);
     
-    // デバウンス: 移動停止後500ms後に判定
+    // デバウンス: 移動停止後800ms後に判定
     moveEndTimer = setTimeout(async () => {
+        if (isAutoDetecting) return;  // 重複実行防止
+        
+        isAutoDetecting = true;
+        
         const center = map.getCenter();
         const lon = center.lng;
         const lat = center.lat;
         
-        console.log(`[main] Map center: [${lon}, ${lat}]`);
+        console.log(`[main] Map center: [${lon.toFixed(4)}, ${lat.toFixed(4)}]`);
         
-        // 都道府県コード判定
-        const prefCode = await detectPrefCodeFromLonLat(lon, lat);
-        
-        if (prefCode !== null) {
-            console.log(`[main] Detected prefecture: ${prefCode}`);
+        try {
+            // 都道府県コード判定
+            const prefCode = await detectPrefCodeFromLonLat(lon, lat);
             
-            // UI のセレクトボックスを更新（ui.js が追加する #pref-select）
-            const prefSelect = document.getElementById('pref-select');
-            if (prefSelect && prefSelect.value !== String(prefCode)) {
-                prefSelect.value = prefCode;
+            if (prefCode !== null) {
+                console.log(`[main] Detected prefecture: ${prefCode}`);
+                
+                // UI のセレクトボックスを更新（ui.js が追加する #pref-select）
+                const prefSelect = document.getElementById('pref-select');
+                if (prefSelect) {
+                    const currentValue = prefSelect.value;
+                    const newValue = String(prefCode);
+                    
+                    // 値が変わった場合のみ更新
+                    if (currentValue !== newValue) {
+                        prefSelect.value = newValue;
+                        
+                        // ハザードレイヤーに反映
+                        await setPrefCode(prefCode);
+                    }
+                }
             }
-            
-            // ハザードレイヤーに反映
-            setPrefCode(prefCode);
+        } catch (error) {
+            console.error('[main] Error in prefecture detection:', error);
+        } finally {
+            isAutoDetecting = false;
         }
-    }, 500);
+    }, 800);
 });
 
 // ======================================================

@@ -32,13 +32,29 @@ function hideLoading() {
 }
 
 // ------------------------------------------------------
+// タイルURL存在チェック（HEAD リクエスト）
+// ------------------------------------------------------
+async function checkTileExists(url) {
+    try {
+        // {z}/{x}/{y} を実際のタイル座標に置き換え（サンプル: z=10, x=905, y=403）
+        const testUrl = url
+            .replace('{z}', '10')
+            .replace('{x}', '905')
+            .replace('{y}', '403');
+        
+        const response = await fetch(testUrl, { method: 'HEAD' });
+        return response.ok;  // 200番台なら true
+    } catch (error) {
+        console.warn(`[hazard] Tile check failed for ${url}:`, error);
+        return false;
+    }
+}
+
+// ------------------------------------------------------
 // ハザードタイルURL生成関数（Fallback 対応）
 // ------------------------------------------------------
 async function hazardTileURL(type, prefCode) {
     const baseURL = "https://disaportaldata.gsi.go.jp/raster";
-    
-    // 都道府県コードを2桁にゼロ埋め
-    const prefStr = prefCode ? String(prefCode).padStart(2, "0") : null;
     
     // タイプ別のベースパス
     const typeMap = {
@@ -54,14 +70,36 @@ async function hazardTileURL(type, prefCode) {
         return null;
     }
     
+    // 都道府県コードを2桁にゼロ埋め
+    const prefStr = prefCode ? String(prefCode).padStart(2, "0") : null;
+    
     // Fallback ロジック: pref_data → data
     if (prefStr) {
         const prefDataURL = `${baseURL}/${basePath}_pref_data/${prefStr}/{z}/{x}/{y}.png`;
-        // 簡易的に pref_data を優先（実際の HEAD チェックは省略）
-        return prefDataURL;
-    } else {
-        const dataURL = `${baseURL}/${basePath}_data/{z}/{x}/{y}.png`;
+        
+        // HEAD チェックで pref_data の存在確認
+        const prefDataExists = await checkTileExists(prefDataURL);
+        
+        if (prefDataExists) {
+            console.log(`[hazard] Using pref_data for ${type} (pref: ${prefStr})`);
+            return prefDataURL;
+        } else {
+            console.warn(`[hazard] pref_data not found for ${type}, falling back to data`);
+        }
+    }
+    
+    // data 版（全国版 or フォールバック）
+    const dataURL = `${baseURL}/${basePath}_data/{z}/{x}/{y}.png`;
+    
+    // HEAD チェックで data の存在確認
+    const dataExists = await checkTileExists(dataURL);
+    
+    if (dataExists) {
+        console.log(`[hazard] Using data for ${type}`);
         return dataURL;
+    } else {
+        console.error(`[hazard] No valid tile URL found for ${type}`);
+        return null;
     }
 }
 
@@ -71,27 +109,19 @@ async function hazardTileURL(type, prefCode) {
 const hazardTiles = {
     flood: {
         id: "hazard-flood",
-        get url() {
-            return hazardTileURL("flood", PREF_CODE);
-        }
+        getUrl: async () => await hazardTileURL("flood", PREF_CODE)
     },
     landslide: {
         id: "hazard-landslide",
-        get url() {
-            return hazardTileURL("landslide", PREF_CODE);
-        }
+        getUrl: async () => await hazardTileURL("landslide", PREF_CODE)
     },
     tsunami: {
         id: "hazard-tsunami",
-        get url() {
-            return hazardTileURL("tsunami", PREF_CODE);
-        }
+        getUrl: async () => await hazardTileURL("tsunami", PREF_CODE)
     },
     liquefaction: {
         id: "hazard-liquefaction",
-        get url() {
-            return hazardTileURL("liquefaction", PREF_CODE);
-        }
+        getUrl: async () => await hazardTileURL("liquefaction", PREF_CODE)
     }
 };
 
@@ -105,7 +135,7 @@ async function addHazardLayers() {
 
     for (const key of Object.keys(hazardTiles)) {
         const spec = hazardTiles[key];
-        const tileURL = await spec.url;
+        const tileURL = await spec.getUrl();
 
         if (!tileURL) {
             console.warn(`[hazard] Skipping ${key}: invalid URL`);
@@ -139,7 +169,7 @@ async function addHazardLayers() {
             }
         }, "gsi-layer");
 
-        console.log(`[hazard] Added layer: ${spec.id}`);
+        console.log(`[hazard] Added layer: ${spec.id} (${tileURL.includes('_pref_data') ? 'pref_data' : 'data'})`);
     }
 
     layersAdded = true;
@@ -201,37 +231,52 @@ export function toggleLayer(show) {
 }
 
 // ------------------------------------------------------
-// 都道府県コード変更（ローディング制御付き）
+// 都道府県コード変更（完全リロード + ローディング制御）
 // ------------------------------------------------------
 export async function setPrefCode(prefCode) {
     console.log(`[hazard] Changing PREF_CODE: ${PREF_CODE} → ${prefCode}`);
     
+    // 同じ値なら何もしない
+    if (PREF_CODE === prefCode) {
+        console.log("[hazard] PREF_CODE unchanged, skipping reload");
+        return;
+    }
+    
     // ローディング表示
     showLoading();
     
-    PREF_CODE = prefCode;
-    
-    // レイヤーが既に追加されている場合は再読み込み
-    if (layersAdded) {
-        layersAdded = false;
+    try {
+        PREF_CODE = prefCode;
         
-        // 既存レイヤーを削除
-        for (const key of Object.keys(hazardTiles)) {
-            const spec = hazardTiles[key];
-            if (mapInstance.getLayer(spec.id)) {
-                mapInstance.removeLayer(spec.id);
+        // レイヤーが既に追加されている場合は完全リロード
+        if (layersAdded) {
+            console.log("[hazard] Removing existing layers...");
+            
+            // 既存レイヤーを完全削除
+            for (const key of Object.keys(hazardTiles)) {
+                const spec = hazardTiles[key];
+                
+                if (mapInstance.getLayer(spec.id)) {
+                    mapInstance.removeLayer(spec.id);
+                }
+                if (mapInstance.getSource(spec.id)) {
+                    mapInstance.removeSource(spec.id);
+                }
             }
-            if (mapInstance.getSource(spec.id)) {
-                mapInstance.removeSource(spec.id);
-            }
+            
+            // フラグをリセット
+            layersAdded = false;
+            
+            // 新しいPREF_CODEで再追加
+            console.log("[hazard] Reloading layers with new PREF_CODE...");
+            await addHazardLayers();
+            
+            console.log("[hazard] Layers reloaded successfully");
         }
-        
-        // 新しいPREF_CODEで再追加
-        await addHazardLayers();
-        
-        console.log("[hazard] Layers reloaded with new PREF_CODE");
+    } catch (error) {
+        console.error("[hazard] Error during setPrefCode:", error);
+    } finally {
+        // ローディング非表示
+        hideLoading();
     }
-    
-    // ローディング非表示
-    hideLoading();
 }

@@ -65,6 +65,8 @@ export async function detectPrefCodeFromLonLat(lon, lat) {
         // GSI 住所検索API（逆ジオコーディング）
         const url = `https://msearch.gsi.go.jp/address-search/AddressSearch?lon=${lon}&lat=${lat}`;
         
+        console.log(`[prefDetect] Requesting: ${url}`);
+        
         const response = await fetch(url);
         
         if (!response.ok) {
@@ -74,19 +76,24 @@ export async function detectPrefCodeFromLonLat(lon, lat) {
         
         const data = await response.json();
         
-        // レスポンス構造: data[0].properties.addressCode など
+        // レスポンス構造確認
         if (!data || data.length === 0) {
             console.warn(`[prefDetect] No address found for [${lon}, ${lat}]`);
             return null;
         }
         
-        // 都道府県名を取得
-        const address = data[0].properties.title || "";
+        // 都道府県名を取得（複数パターンに対応）
+        const firstResult = data[0];
+        const address = firstResult.properties?.title || 
+                       firstResult.properties?.address || 
+                       "";
         
-        // 都道府県名を抽出（最初の都道府県名にマッチ）
+        console.log(`[prefDetect] Address: ${address}`);
+        
+        // 都道府県名を抽出（最初にマッチした都道府県名を採用）
         for (const [prefName, code] of Object.entries(PREF_NAME_TO_CODE)) {
             if (address.includes(prefName)) {
-                console.log(`[prefDetect] Found: ${prefName} (code: ${code})`);
+                console.log(`[prefDetect] ✓ Found: ${prefName} (code: ${code})`);
                 return code;
             }
         }

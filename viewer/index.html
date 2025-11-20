@@ -37,16 +37,24 @@
       position: absolute;
       top: 10px;
       right: 10px;
-      background: rgba(0, 0, 0, 0.8);
+      background: rgba(0, 0, 0, 0.85);
       color: white;
-      padding: 8px 12px;
-      border-radius: 4px;
+      padding: 10px 16px;
+      border-radius: 6px;
       font-size: 13px;
+      font-weight: 500;
       z-index: 1000;
       display: none;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+      animation: pulse 1.5s ease-in-out infinite;
     }
     #hazard-loading.visible {
       display: block;
+    }
+    
+    @keyframes pulse {
+      0%, 100% { opacity: 0.9; }
+      50% { opacity: 0.6; }
     }
   </style>
 </head>
@@ -57,7 +65,7 @@
   <div id="map"></div>
 
   <!-- ローディングインジケータ -->
-  <div id="hazard-loading">ハザードデータ読み込み中...</div>
+  <div id="hazard-loading">🔄 ハザードデータ読み込み中...</div>
 
   <!-- レイヤー切替 UIパネルは ui.js が動的追加 -->
 
