@@ -1,5 +1,6 @@
 import { parseInput } from "./utils/geocode.js";
 import { createLayerToggleUI } from "./layers/ui.js";
+import { addHazardLayers, toggleHazard } from "./layers/hazard.js";
 
 // 地図初期化(大阪本社)
 const map = new maplibregl.Map({
@@ -45,11 +46,19 @@ map.on("load",()=>{
         paint:{"raster-opacity":0.4}
     });
 
+    addHazardLayers(map);
+
     createLayerToggleUI({
-        hazard: { label: "ハザード", toggle: () => {} },
-        jiban: { label: "地番", toggle: () => {} },
-        grid: { label: "送電網", toggle: () => {} },
-        capacity: { label: "空き容量", toggle: () => {} }
+        flood: { label: "洪水（浸水深）", toggle: (c) => toggleHazard("flood", c) },
+        landslide: { label: "土砂災害", toggle: (c) => toggleHazard("landslide", c) },
+        tsunami: { label: "津波浸水", toggle: (c) => toggleHazard("tsunami", c) },
+        liquefaction: { label: "液状化", toggle: (c) => toggleHazard("liquefaction", c) },
+        jiban: { label: "地番", toggle: (c) => console.log("地番:", c) },
+        grid: { label: "送電網", toggle: (c) => console.log("送電網:", c) },
+        capacity: { label: "空き容量", toggle: (c) => console.log("空き容量:", c) },
+        photo: { label: "航空写真", toggle: (c) => {
+            map.setLayoutProperty("gsi-photo-layer", "visibility", c ? "visible" : "none");
+        }}
     });
 });
 
