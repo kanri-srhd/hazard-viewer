@@ -50,6 +50,41 @@ export async function initBaseLayers(map) {
     //     }
     // });
 
+    // -------------------------
+    // 建物タイル（背景レイヤー）
+    // -------------------------
+    // GeoJSON タイルとして読み込み
+    map.addSource("gsi-bldg", {
+        type: "geojson",
+        data: {
+            type: "FeatureCollection",
+            features: []
+        }
+    });
+
+    map.addLayer({
+        id: "gsi-bldg-fill",
+        type: "fill",
+        source: "gsi-bldg",
+        paint: {
+            "fill-color": "#d57f00",
+            "fill-opacity": 0.2
+        }
+    }, "gsi-layer");
+
+    map.addLayer({
+        id: "gsi-bldg-outline",
+        type: "line",
+        source: "gsi-bldg",
+        paint: {
+            "line-color": "#c46e00",
+            "line-width": 0.5,
+            "line-opacity": 0.6
+        }
+    }, "gsi-bldg-fill");
+
+    console.log("[base] ✓ Building background layers added");
+
     console.log("[base] Base layer initialization completed.");
 }
 

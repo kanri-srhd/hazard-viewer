@@ -160,6 +160,27 @@
   <!-- ピン削除ボタン -->
   <button id="clear-pins-btn">🗑 ピン削除</button>
 
+  <!-- 航空写真 UI -->
+  <div id="photo-control" style="
+      position: absolute;
+      top: 150px;
+      left: 10px;
+      z-index: 999;
+      background: white;
+      padding: 10px 14px;
+      border-radius: 6px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.25);
+      font-size: 13px;
+  ">
+    <label style="display:flex;align-items:center;gap:6px;">
+      <input type="checkbox" id="toggle-photo"/>
+      航空写真
+    </label>
+    <div style="margin-top:6px;">
+      <input type="range" id="photo-opacity" min="0" max="1" step="0.05" value="0.4" style="width:150px;">
+    </div>
+  </div>
+
   <!-- レイヤー切替 UIパネルは ui.js が動的追加 -->
 
   <!-- MapLibre ベースの main.js を読み込む -->

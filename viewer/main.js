@@ -210,6 +210,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const searchBtn = document.getElementById('global-search-btn');
     const searchInput = document.getElementById('global-search-input');
     const clearPinsBtn = document.getElementById('clear-pins-btn');
+    const togglePhoto = document.getElementById('toggle-photo');
+    const photoOpacity = document.getElementById('photo-opacity');
     
     // 検索ボタン
     if (searchBtn) {
@@ -234,6 +236,28 @@ document.addEventListener('DOMContentLoaded', () => {
         clearPinsBtn.addEventListener('click', () => {
             console.log('[main] Clear pins button clicked');
             clearAllMarkers();
+        });
+    }
+    
+    // ------------------------------------------------------
+    // 航空写真 ON/OFF
+    // ------------------------------------------------------
+    if (togglePhoto) {
+        togglePhoto.addEventListener('change', (e) => {
+            const visible = e.target.checked ? "visible" : "none";
+            map.setLayoutProperty("gsi-photo-layer", "visibility", visible);
+            console.log(`[main] Aerial photo: ${visible}`);
+        });
+    }
+    
+    // ------------------------------------------------------
+    // 航空写真 透明度コントロール
+    // ------------------------------------------------------
+    if (photoOpacity) {
+        photoOpacity.addEventListener('input', (e) => {
+            const opacity = parseFloat(e.target.value);
+            map.setPaintProperty("gsi-photo-layer", "raster-opacity", opacity);
+            console.log(`[main] Aerial photo opacity: ${opacity}`);
         });
     }
 });
@@ -373,5 +397,31 @@ async function loadViewerLayers() {
 // ======================================================
 map.on('load', () => {
     console.log("Map Loaded: Initializing Viewer Layers...");
+    
+    // ------------------------------------------------------
+    // 航空写真レイヤー（GSI seamlessphoto）
+    // ------------------------------------------------------
+    map.addSource("gsi-photo", {
+        type: "raster",
+        tiles: [
+            "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/{z}/{x}/{y}.jpg"
+        ],
+        tileSize: 256,
+        attribution: "© GSI Japan"
+    });
+
+    map.addLayer({
+        id: "gsi-photo-layer",
+        type: "raster",
+        source: "gsi-photo",
+        layout: { visibility: "none" },
+        paint: {
+            "raster-opacity": 0.4
+        }
+    }, "gsi-layer");
+    // 標準地図の上に差し込む
+    
+    console.log("[main] ✓ Aerial photo layer added");
+    
     loadViewerLayers();
 });
