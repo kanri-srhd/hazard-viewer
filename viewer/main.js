@@ -106,3 +106,12 @@ document.getElementById("toggle-photo").onchange = (ev)=>{
 document.getElementById("photo-opacity").oninput = (ev)=>{
     map.setPaintProperty("gsi-photo-layer","raster-opacity", parseFloat(ev.target.value));
 };
+
+// レイヤーパネルのサイズ調整
+window.addEventListener("resize", () => {
+    const panel = document.getElementById("layer-control");
+    if (panel) {
+        panel.style.maxHeight = (window.innerHeight - 200) + "px";
+        panel.style.overflowY = "auto";
+    }
+});

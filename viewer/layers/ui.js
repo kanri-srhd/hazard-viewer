@@ -5,20 +5,11 @@ export function createLayerToggleUI(layers) {
 
     const container = document.createElement("div");
     container.id = "layer-toggle";
-    container.style.cssText = `
-        position:absolute;
-        top:10px;
-        left:10px;
-        background:white;
-        padding:10px;
-        border-radius:6px;
-        box-shadow:0 1px 4px rgba(0,0,0,0.3);
-        font-size:14px;
-        z-index:999;
-        width: 200px;
-        max-height: 90vh;
-        overflow-y: auto;
-    `;
+    container.style.width = "100%";
+    container.style.display = "flex";
+    container.style.flexDirection = "column";
+    container.style.gap = "6px";
+    container.style.fontSize = "14px";
 
     // -------------------------------------------
     // 都道府県セレクトボックス
@@ -189,5 +180,5 @@ export function createLayerToggleUI(layers) {
         }
     }
 
-    document.body.appendChild(container);
+    document.getElementById("layer-control").appendChild(container);
 }
