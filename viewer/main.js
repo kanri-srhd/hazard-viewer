@@ -138,28 +138,56 @@ map.on("load", () => {
 
 function addGoogleMapsStyleControls() {
     // --------------------------------------------------
-    // ズームコントロール（＋/－）
+    // 手動ズームボタン（#map-controls内の + / -）
     // --------------------------------------------------
-    const nav = new maplibregl.NavigationControl({
-        showCompass: false,
-        visualizePitch: false
-    });
-    map.addControl(nav, "bottom-right");
+    const zoomInBtn = document.getElementById("zoom-in");
+    const zoomOutBtn = document.getElementById("zoom-out");
+
+    if (zoomInBtn) {
+        zoomInBtn.addEventListener("click", () => {
+            map.zoomIn({ duration: 300 });
+        });
+    }
+
+    if (zoomOutBtn) {
+        zoomOutBtn.addEventListener("click", () => {
+            map.zoomOut({ duration: 300 });
+        });
+    }
 
     // --------------------------------------------------
-    // 現在地ボタン（GeolocateControl）
+    // 現在地ボタン（#geolocate）
     // --------------------------------------------------
-    const geolocate = new maplibregl.GeolocateControl({
+    const geolocateBtn = document.getElementById("geolocate");
+    
+    // GeolocateControlをプログラムから操作するために保持
+    const geolocateControl = new maplibregl.GeolocateControl({
         positionOptions: {
             enableHighAccuracy: true
         },
         trackUserLocation: true,
         showUserHeading: true
     });
-    map.addControl(geolocate, "bottom-right");
+    
+    // マップに追加（非表示だが機能は有効）
+    map.addControl(geolocateControl, "top-left");
+    
+    // CSSで非表示にする
+    setTimeout(() => {
+        const geolocateContainer = document.querySelector(".maplibregl-ctrl-geolocate");
+        if (geolocateContainer) {
+            geolocateContainer.style.display = "none";
+        }
+    }, 100);
+
+    if (geolocateBtn) {
+        geolocateBtn.addEventListener("click", () => {
+            geolocateControl.trigger();
+        });
+    }
 
     // --------------------------------------------------
-    // スケールコントロール（メートル表記）
+    // スケールコントロール（左下）
     // --------------------------------------------------
     const scale = new maplibregl.ScaleControl({
         maxWidth: 100,
@@ -167,7 +195,7 @@ function addGoogleMapsStyleControls() {
     });
     map.addControl(scale, "bottom-left");
 
-    console.log("[main.js] Google Maps-style controls added");
+    console.log("[main.js] Google Maps-style manual controls added");
 }
 
 // ======================================================================

@@ -1,16 +1,16 @@
 // ======================================================================
-// viewer/layers/ui.js - Google Maps風UI + スマホ全画面対応版
+// viewer/layers/ui.js - Google Maps完全模倣UI + スマホ全画面対応版
 // 
 // 機能:
 // - PC: 左スライドイン Drawer
-// - スマホ: 下スライドイン Bottom Sheet（全画面）
+// - スマホ: 下スライドイン Bottom Sheet（70vh）
 // - メニューアイコン（≡）によるトグル
 // - アコーディオン式セクション
 // - 透明度スライダー
 // - レスポンシブ自動判定
+// - カテゴリー順序: 地番 → ハザード → 電力 → 地図
+// - 都道府県セレクトUIを完全削除
 // ======================================================================
-
-import { PREF_POLYGONS } from "../utils/pref_polygons.js";
 
 let isPanelOpen = false;
 let isMobile = false;
@@ -21,7 +21,7 @@ let isMobile = false;
  * @param {Object} callbacks - コールバック関数群
  */
 export function createLayerToggleUI(map, callbacks = {}) {
-    console.log("[ui] Creating Google Maps-style layer UI");
+    console.log("[ui] Creating Google Maps-style layer UI (complete clone version)");
 
     // モバイル判定
     isMobile = window.innerWidth < 768;
@@ -44,22 +44,16 @@ export function createLayerToggleUI(map, callbacks = {}) {
     header.textContent = "🗺 レイヤー管理";
     panel.appendChild(header);
 
-    // 都道府県セレクト
-    createPrefSelectSection(panel, callbacks.onPrefChange);
-
-    // ハザードセクション
+    // カテゴリー順序: 地番 → ハザード → 電力 → 地図
+    createJibanSection(panel, callbacks);
     createHazardSection(panel, map, callbacks);
-
-    // 地図・航空写真セクション
+    createCapacitySection(panel, callbacks);
     createMapSection(panel, map, callbacks);
-
-    // 送電網・地番セクション
-    createUtilitySection(panel, callbacks);
 
     // リサイズ対応
     window.addEventListener("resize", handleResize);
 
-    console.log("[ui] Layer UI created successfully");
+    console.log("[ui] Layer UI created successfully (categories: 地番 → ハザード → 電力 → 地図)");
 }
 
 /**
@@ -158,41 +152,23 @@ function handleResize() {
 }
 
 /**
- * 都道府県セレクトセクション
+ * 地番セクション（第1カテゴリー）
  */
-function createPrefSelectSection(panel, onPrefChange) {
-    const container = document.createElement("div");
-    container.className = "pref-select-container";
+function createJibanSection(panel, callbacks) {
+    const section = createSection("📍 地番", [
+        {
+            id: "jiban",
+            icon: "📍",
+            label: "地番表示",
+            toggle: callbacks.toggleJiban
+        }
+    ], null, false);
 
-    const label = document.createElement("label");
-    label.textContent = "📍 表示都道府県";
-    container.appendChild(label);
-
-    const select = document.createElement("select");
-    select.id = "prefSelect";
-
-    // 全国オプション
-    const defaultOption = document.createElement("option");
-    defaultOption.value = "";
-    defaultOption.textContent = "全国";
-    select.appendChild(defaultOption);
-
-    // 47都道府県を自動生成
-    PREF_POLYGONS.forEach(pref => {
-        const option = document.createElement("option");
-        option.value = pref.code;
-        option.textContent = `${pref.name} (${pref.code})`;
-        select.appendChild(option);
-    });
-
-    container.appendChild(select);
-    panel.appendChild(container);
-
-    console.log("[ui] Prefecture select populated");
+    panel.appendChild(section);
 }
 
 /**
- * ハザードセクション
+ * ハザードセクション（第2カテゴリー）
  */
 function createHazardSection(panel, map, callbacks) {
     const section = createSection("🌊 ハザードレイヤー", [
@@ -230,7 +206,29 @@ function createHazardSection(panel, map, callbacks) {
 }
 
 /**
- * 地図・航空写真セクション
+ * 電力（空き容量）セクション（第3カテゴリー）
+ */
+function createCapacitySection(panel, callbacks) {
+    const section = createSection("⚡ 電力", [
+        {
+            id: "capacity",
+            icon: "📊",
+            label: "空き容量",
+            toggle: callbacks.toggleCapacity
+        },
+        {
+            id: "grid",
+            icon: "⚡",
+            label: "送電網",
+            toggle: callbacks.toggleGrid
+        }
+    ], null, false);
+
+    panel.appendChild(section);
+}
+
+/**
+ * 地図・航空写真セクション（第4カテゴリー）
  */
 function createMapSection(panel, map, callbacks) {
     const section = createSection("🗾 地図・航空写真", [
@@ -242,34 +240,6 @@ function createMapSection(panel, map, callbacks) {
             toggle: callbacks.togglePhoto
         }
     ], map, true);
-
-    panel.appendChild(section);
-}
-
-/**
- * 送電網・地番セクション
- */
-function createUtilitySection(panel, callbacks) {
-    const section = createSection("⚡ 送電網・地番", [
-        {
-            id: "grid",
-            icon: "⚡",
-            label: "送電網",
-            toggle: callbacks.toggleGrid
-        },
-        {
-            id: "jiban",
-            icon: "📍",
-            label: "地番",
-            toggle: callbacks.toggleJiban
-        },
-        {
-            id: "capacity",
-            icon: "📊",
-            label: "空き容量",
-            toggle: callbacks.toggleCapacity
-        }
-    ], null, false);
 
     panel.appendChild(section);
 }
