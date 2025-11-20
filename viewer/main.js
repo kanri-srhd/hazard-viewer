@@ -12,6 +12,8 @@ import { setPrefCode } from './layers/hazard.js';
 // ------------------------------
 const map = new maplibregl.Map({
     container: 'map',
+    center: [135.5033, 34.6863],  // 大阪中央区河原町
+    zoom: 14,
     style: {
         "version": 8,
         "sources": {
@@ -34,8 +36,6 @@ const map = new maplibregl.Map({
             }
         ]
     },
-    center: [135.30, 34.40],  // lng, lat
-    zoom: 10,
     maxZoom: 18,
     minZoom: 5
 });

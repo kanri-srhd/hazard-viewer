@@ -36,11 +36,11 @@ function hideLoading() {
 // ------------------------------------------------------
 async function checkTileExists(url) {
     try {
-        // {z}/{x}/{y} を実際のタイル座標に置き換え（サンプル: z=10, x=905, y=403）
+        // {z}/{x}/{y} を実際のタイル座標に置き換え（大阪中央区: z=14, x=14550, y=6451）
         const testUrl = url
-            .replace('{z}', '10')
-            .replace('{x}', '905')
-            .replace('{y}', '403');
+            .replace('{z}', '14')
+            .replace('{x}', '14550')
+            .replace('{y}', '6451');
         
         const response = await fetch(testUrl, { method: 'HEAD' });
         return response.ok;  // 200番台なら true
@@ -150,7 +150,7 @@ async function addHazardLayers() {
             }
         }
 
-        // ソース追加
+        // ソース追加（tilesは文字列配列）
         mapInstance.addSource(spec.id, {
             type: "raster",
             tiles: [tileURL],
@@ -212,6 +212,8 @@ export function toggleLayer(show) {
         // 初回のみレイヤー作成
         if (!layersAdded) {
             await addHazardLayers();
+            // レイヤー追加後、タイミング問題回避のため少し待つ
+            await new Promise(resolve => setTimeout(resolve, 50));
         }
         
         // 全ハザード一括ON/OFF

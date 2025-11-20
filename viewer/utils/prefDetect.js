@@ -62,8 +62,8 @@ const PREF_NAME_TO_CODE = {
 // ------------------------------------------------------
 export async function detectPrefCodeFromLonLat(lon, lat) {
     try {
-        // GSI 住所検索API（逆ジオコーディング）
-        const url = `https://msearch.gsi.go.jp/address-search/AddressSearch?lon=${lon}&lat=${lat}`;
+        // GSI 住所検索API（逆ジオコーディング）- 正しいフォーマット: q=lon,lat
+        const url = `https://msearch.gsi.go.jp/address-search/AddressSearch?q=${lon},${lat}`;
         
         console.log(`[prefDetect] Requesting: ${url}`);
         
