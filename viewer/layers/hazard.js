@@ -1,11 +1,18 @@
-// ======================================================
-// hazard.js
-// 動的ハザードレイヤー管理モジュール（フェーズ2）
-// 都道府県コード対応 + pref_data/data 自動フォールバック
-// ======================================================
+// ======================================================================
+// hazard.js - 動的ハザードレイヤー管理モジュール（フェーズ2改善版）
+// 
+// 機能:
+// - 都道府県コード対応 + pref_data/data 自動フォールバック
+// - HEAD チェック結果のキャッシュ（高速化）
+// - 透明度制御
+// ======================================================================
 
 let mapInstance = null;
 let currentPrefCode = null;
+
+// HEAD チェック結果のキャッシュ（高速化）
+// 構造: { "flood-01": true, "sediment-27": false, ... }
+const hazardUrlCache = {};
 
 // ハザード種別とディレクトリの対応表
 const HAZARD_CONFIGS = {
@@ -36,11 +43,22 @@ const HAZARD_CONFIGS = {
 };
 
 /**
- * HEAD リクエストで pref_data URL の存在確認
+ * HEAD リクエストで pref_data URL の存在確認（キャッシュ対応）
+ * @param {string} type - ハザード種別
+ * @param {string} prefCode - 都道府県コード
  * @param {string} url - チェック対象URL
  * @returns {Promise<boolean>} - 存在すれば true
  */
-async function checkUrlExists(url) {
+async function checkUrlExists(type, prefCode, url) {
+    const cacheKey = `${type}-${prefCode}`;
+    
+    // キャッシュにあればそれを返す
+    if (cacheKey in hazardUrlCache) {
+        console.log(`[hazard] Cache hit: ${cacheKey} = ${hazardUrlCache[cacheKey]}`);
+        return hazardUrlCache[cacheKey];
+    }
+    
+    // HEAD チェック実行
     try {
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 1500);
@@ -51,9 +69,18 @@ async function checkUrlExists(url) {
         });
         
         clearTimeout(timeoutId);
-        return response.ok;
+        const exists = response.ok;
+        
+        // キャッシュに保存
+        hazardUrlCache[cacheKey] = exists;
+        console.log(`[hazard] Cache stored: ${cacheKey} = ${exists}`);
+        
+        return exists;
         
     } catch (error) {
+        // エラー時は false としてキャッシュ
+        hazardUrlCache[cacheKey] = false;
+        console.log(`[hazard] Cache stored (error): ${cacheKey} = false`);
         return false;
     }
 }
@@ -77,9 +104,9 @@ async function getHazardTileUrl(type, prefCode) {
         return `${baseUrl}/${config.dataDir}/{z}/{x}/{y}.png`;
     }
     
-    // pref_data の存在確認（サンプルタイルで確認）
+    // pref_data の存在確認（サンプルタイルで確認 + キャッシュ利用）
     const testUrl = `${baseUrl}/${config.prefDataDir}/${prefCode}/8/224/101.png`;
-    const prefDataExists = await checkUrlExists(testUrl);
+    const prefDataExists = await checkUrlExists(type, prefCode, testUrl);
     
     if (prefDataExists) {
         console.log(`[hazard] ${type}: pref_data available for ${prefCode}`);
@@ -156,8 +183,9 @@ export async function refreshAllHazardLayers() {
         const source = mapInstance.getSource(config.sourceId);
         
         if (source) {
-            // タイルURLを更新（ソースを再設定）
+            // 現在の状態を保存
             const visibility = mapInstance.getLayoutProperty(config.layerId, "visibility");
+            const opacity = mapInstance.getPaintProperty(config.layerId, "raster-opacity") || 0.75;
             
             // ソースを削除して再追加
             if (mapInstance.getLayer(config.layerId)) {
@@ -177,10 +205,10 @@ export async function refreshAllHazardLayers() {
                 type: "raster",
                 source: config.sourceId,
                 layout: { visibility: visibility || "none" },
-                paint: { "raster-opacity": 0.75 }
+                paint: { "raster-opacity": opacity }
             }, "gsi-bldg-outline");
             
-            console.log(`[hazard] ✓ ${type} layer refreshed`);
+            console.log(`[hazard] ✓ ${type} layer refreshed (opacity: ${opacity})`);
         }
     }
     
@@ -212,6 +240,30 @@ export function toggleHazard(type, enabled) {
             enabled ? "visible" : "none"
         );
         console.log(`[hazard] ${type}: ${enabled ? "ON" : "OFF"}`);
+    }
+}
+
+/**
+ * ハザードレイヤーの透明度を設定
+ * @param {string} type - ハザード種別
+ * @param {number} opacity - 透明度 (0.0 〜 1.0)
+ */
+export function setHazardOpacity(type, opacity) {
+    if (!mapInstance) {
+        console.error("[hazard] Map not initialized");
+        return;
+    }
+    
+    const config = HAZARD_CONFIGS[type];
+    if (!config) {
+        console.error(`[hazard] Unknown hazard type: ${type}`);
+        return;
+    }
+    
+    const layer = mapInstance.getLayer(config.layerId);
+    if (layer) {
+        mapInstance.setPaintProperty(config.layerId, "raster-opacity", opacity);
+        console.log(`[hazard] ${type} opacity: ${opacity}`);
     }
 }
 
