@@ -4,7 +4,7 @@
 <meta charset="utf-8" />
 <title>統合ビューア</title>
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+<meta http-equiv="Cache-Control" content="no-store" />
 <meta http-equiv="Pragma" content="no-cache" />
 <meta http-equiv="Expires" content="0" />
 
@@ -73,6 +73,17 @@ body,html{margin:0;padding:0;height:100%;width:100%;font-family:sans-serif;}
 
 <body>
 
+<script>
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.getRegistrations().then(function(registrations) {
+    for (let reg of registrations) {
+      reg.unregister();
+      console.log("ServiceWorker unregistered");
+    }
+  });
+}
+</script>
+
 <div id="map"></div>
 
 <div id="search-panel">
@@ -89,6 +100,6 @@ body,html{margin:0;padding:0;height:100%;width:100%;font-family:sans-serif;}
 
 <div id="clear-pins">🗑 ピン削除</div>
 
-<script type="module" src="./main.js?v=20251120-01"></script>
+<script type="module" src="./main.js?v=20251120-02"></script>
 </body>
 </html>
