@@ -1,0 +1,174 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Capabilities xmlns="http://www.opengis.net/wmts/1.0" 
+              xmlns:ows="http://www.opengis.net/ows/1.1" 
+              xmlns:xlink="http://www.w3.org/1999/xlink" 
+              version="1.0.0">
+    
+    <ows:ServiceIdentification>
+        <ows:Title>重ねるハザードマップ WMTS</ows:Title>
+    </ows:ServiceIdentification>
+    
+    <Contents>
+        <!-- 洪水浸水想定区域（想定最大規模） -->
+        <Layer>
+            <ows:Title>洪水浸水想定区域（想定最大規模）</ows:Title>
+            <ows:Identifier>flood_l2_shinsuishin</ows:Identifier>
+            <Style isDefault="true">
+                <ows:Identifier>default</ows:Identifier>
+            </Style>
+            <Format>image/png</Format>
+            <ResourceURL format="image/png" 
+                         resourceType="tile" 
+                         template="https://disaportaldata.gsi.go.jp/raster/01_flood_l2_shinsuishin_data/{TileMatrix}/{TileCol}/{TileRow}.png"/>
+            <TileMatrixSetLink>
+                <TileMatrixSet>default</TileMatrixSet>
+            </TileMatrixSetLink>
+        </Layer>
+        
+        <!-- 洪水浸水想定区域（計画規模） -->
+        <Layer>
+            <ows:Title>洪水浸水想定区域（計画規模）</ows:Title>
+            <ows:Identifier>flood_keikaku</ows:Identifier>
+            <Style isDefault="true">
+                <ows:Identifier>default</ows:Identifier>
+            </Style>
+            <Format>image/png</Format>
+            <ResourceURL format="image/png" 
+                         resourceType="tile" 
+                         template="https://disaportaldata.gsi.go.jp/raster/02_flood_keikaku_data/{TileMatrix}/{TileCol}/{TileRow}.png"/>
+            <TileMatrixSetLink>
+                <TileMatrixSet>default</TileMatrixSet>
+            </TileMatrixSetLink>
+        </Layer>
+        
+        <!-- 土砂災害警戒区域（急傾斜地の崩壊） -->
+        <Layer>
+            <ows:Title>土砂災害警戒区域（急傾斜地の崩壊）</ows:Title>
+            <ows:Identifier>sediment_keikai</ows:Identifier>
+            <Style isDefault="true">
+                <ows:Identifier>default</ows:Identifier>
+            </Style>
+            <Format>image/png</Format>
+            <ResourceURL format="image/png" 
+                         resourceType="tile" 
+                         template="https://disaportaldata.gsi.go.jp/raster/03_sediment_keikai_data/{TileMatrix}/{TileCol}/{TileRow}.png"/>
+            <TileMatrixSetLink>
+                <TileMatrixSet>default</TileMatrixSet>
+            </TileMatrixSetLink>
+        </Layer>
+        
+        <!-- 津波浸水想定 -->
+        <Layer>
+            <ows:Title>津波浸水想定</ows:Title>
+            <ows:Identifier>tsunami_newlegend</ows:Identifier>
+            <Style isDefault="true">
+                <ows:Identifier>default</ows:Identifier>
+            </Style>
+            <Format>image/png</Format>
+            <ResourceURL format="image/png" 
+                         resourceType="tile" 
+                         template="https://disaportaldata.gsi.go.jp/raster/05_tsunami_newlegend_data/{TileMatrix}/{TileCol}/{TileRow}.png"/>
+            <TileMatrixSetLink>
+                <TileMatrixSet>default</TileMatrixSet>
+            </TileMatrixSetLink>
+        </Layer>
+        
+        <!-- 高潮浸水想定区域 -->
+        <Layer>
+            <ows:Title>高潮浸水想定区域</ows:Title>
+            <ows:Identifier>takashio_soutei</ows:Identifier>
+            <Style isDefault="true">
+                <ows:Identifier>default</ows:Identifier>
+            </Style>
+            <Format>image/png</Format>
+            <ResourceURL format="image/png" 
+                         resourceType="tile" 
+                         template="https://disaportaldata.gsi.go.jp/raster/06_takashio_soutei_data/{TileMatrix}/{TileCol}/{TileRow}.png"/>
+            <TileMatrixSetLink>
+                <TileMatrixSet>default</TileMatrixSet>
+            </TileMatrixSetLink>
+        </Layer>
+        
+        <!-- 地震防災対策強化地域 -->
+        <Layer>
+            <ows:Title>地震防災対策強化地域</ows:Title>
+            <ows:Identifier>jishin_kyouka</ows:Identifier>
+            <Style isDefault="true">
+                <ows:Identifier>default</ows:Identifier>
+            </Style>
+            <Format>image/png</Format>
+            <ResourceURL format="image/png" 
+                         resourceType="tile" 
+                         template="https://disaportaldata.gsi.go.jp/raster/07_jishin_kyouka/{TileMatrix}/{TileCol}/{TileRow}.png"/>
+            <TileMatrixSetLink>
+                <TileMatrixSet>default</TileMatrixSet>
+            </TileMatrixSetLink>
+        </Layer>
+        
+        <!-- 道路冠水想定箇所 -->
+        <Layer>
+            <ows:Title>道路冠水想定箇所</ows:Title>
+            <ows:Identifier>road_kansui</ows:Identifier>
+            <Style isDefault="true">
+                <ows:Identifier>default</ows:Identifier>
+            </Style>
+            <Format>image/png</Format>
+            <ResourceURL format="image/png" 
+                         resourceType="tile" 
+                         template="https://disaportaldata.gsi.go.jp/raster/08_road_kansui_data/{TileMatrix}/{TileCol}/{TileRow}.png"/>
+            <TileMatrixSetLink>
+                <TileMatrixSet>default</TileMatrixSet>
+            </TileMatrixSetLink>
+        </Layer>
+        
+    </Contents>
+    
+    <TileMatrixSet>
+        <ows:Identifier>default</ows:Identifier>
+        <ows:SupportedCRS>urn:ogc:def:crs:EPSG::3857</ows:SupportedCRS>
+        
+        <TileMatrix>
+            <ows:Identifier>0</ows:Identifier>
+            <ScaleDenominator>559082264.029</ScaleDenominator>
+            <TopLeftCorner>-20037508.342789 20037508.342789</TopLeftCorner>
+            <TileWidth>256</TileWidth>
+            <TileHeight>256</TileHeight>
+            <MatrixWidth>1</MatrixWidth>
+            <MatrixHeight>1</MatrixHeight>
+        </TileMatrix>
+        
+        <TileMatrix>
+            <ows:Identifier>1</ows:Identifier>
+            <ScaleDenominator>279541132.015</ScaleDenominator>
+            <TopLeftCorner>-20037508.342789 20037508.342789</TopLeftCorner>
+            <TileWidth>256</TileWidth>
+            <TileHeight>256</TileHeight>
+            <MatrixWidth>2</MatrixWidth>
+            <MatrixHeight>2</MatrixHeight>
+        </TileMatrix>
+        
+        <TileMatrix>
+            <ows:Identifier>2</ows:Identifier>
+            <ScaleDenominator>139770566.007</ScaleDenominator>
+            <TopLeftCorner>-20037508.342789 20037508.342789</TopLeftCorner>
+            <TileWidth>256</TileWidth>
+            <TileHeight>256</TileHeight>
+            <MatrixWidth>4</MatrixWidth>
+            <MatrixHeight>4</MatrixHeight>
+        </TileMatrix>
+        
+        <!-- 省略: 3-16 -->
+        
+        <TileMatrix>
+            <ows:Identifier>17</ows:Identifier>
+            <ScaleDenominator>4265.459</ScaleDenominator>
+            <TopLeftCorner>-20037508.342789 20037508.342789</TopLeftCorner>
+            <TileWidth>256</TileWidth>
+            <TileHeight>256</TileHeight>
+            <MatrixWidth>131072</MatrixWidth>
+            <MatrixHeight>131072</MatrixHeight>
+        </TileMatrix>
+        
+    </TileMatrixSet>
+    
+</Capabilities>
