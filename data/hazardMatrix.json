@@ -2,8 +2,8 @@
   "flood_l2_shinsuishin": {
     "title": "洪水浸水想定区域（想定最大規模）",
     "id": "flood_l2_shinsuishin",
-    "directory": "01_flood_l2_shinsuishin",
-    "template": "https://disaportaldata.gsi.go.jp/raster/01_flood_l2_shinsuishin/{z}/{x}/{y}.png",
+    "directory": "01_flood_l2_shinsuishin_kaokuteki",
+    "template": "https://disaportaldata.gsi.go.jp/raster/01_flood_l2_shinsuishin_kaokuteki/{z}/{x}/{y}.png",
     "prefOrData": "pref-or-data",
     "minzoom": 2,
     "maxzoom": 17
@@ -11,8 +11,8 @@
   "flood_keikaku": {
     "title": "洪水浸水想定区域（計画規模）",
     "id": "flood_keikaku",
-    "directory": "02_flood_keikaku",
-    "template": "https://disaportaldata.gsi.go.jp/raster/02_flood_keikaku/{z}/{x}/{y}.png",
+    "directory": "02_flood_l2_keikakukibo_kaokuteki",
+    "template": "https://disaportaldata.gsi.go.jp/raster/02_flood_l2_keikakukibo_kaokuteki/{z}/{x}/{y}.png",
     "prefOrData": "pref-or-data",
     "minzoom": 2,
     "maxzoom": 17
