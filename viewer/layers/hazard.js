@@ -26,6 +26,7 @@ const TRANSPARENT_TILE = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAAB
 
 // ----------------------------------------------------------------------
 // URL生成（prefOrData による自動分岐 + フェイルオーバー対応）
+// GSI公式サブフォルダ構造: raster/{directory}/{pref}/{z}/{x}/{y}.png
 // ----------------------------------------------------------------------
 function buildTileUrl(config, prefCode, useFallback = false) {
     // MLIT API など
@@ -41,8 +42,9 @@ function buildTileUrl(config, prefCode, useFallback = false) {
     }
 
     // 都道府県別タイル（isPrefBased フラグ考慮）
+    // GSI公式構造: raster/{directory}/{pref}/{z}/{x}/{y}.png
     if (config.prefOrData === "pref-or-data" && prefCode && config.isPrefBased) {
-        return `${base}/${config.directory}_pref_data/${prefCode}/{z}/{x}/{y}.png`;
+        return `${base}/${config.directory}/${prefCode}/{z}/{x}/{y}.png`;
     }
 
     // 全国統一タイル
