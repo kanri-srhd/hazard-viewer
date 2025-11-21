@@ -5,6 +5,8 @@
     "directory": "01_flood_l2_shinsuishin_kaokuteki",
     "template": "https://disaportaldata.gsi.go.jp/raster/01_flood_l2_shinsuishin_kaokuteki/{z}/{x}/{y}.png",
     "prefOrData": "pref-or-data",
+    "isPrefBased": true,
+    "fallbackToNational": true,
     "minzoom": 2,
     "maxzoom": 17
   },
@@ -14,6 +16,8 @@
     "directory": "02_flood_l2_keikakukibo_kaokuteki",
     "template": "https://disaportaldata.gsi.go.jp/raster/02_flood_l2_keikakukibo_kaokuteki/{z}/{x}/{y}.png",
     "prefOrData": "pref-or-data",
+    "isPrefBased": true,
+    "fallbackToNational": true,
     "minzoom": 2,
     "maxzoom": 17
   },
@@ -23,6 +27,8 @@
     "directory": "03_sediment_keikai",
     "template": "https://disaportaldata.gsi.go.jp/raster/03_sediment_keikai/{z}/{x}/{y}.png",
     "prefOrData": "pref-or-data",
+    "isPrefBased": false,
+    "fallbackToNational": false,
     "minzoom": 2,
     "maxzoom": 17
   },
@@ -32,6 +38,8 @@
     "directory": "05_tsunami_newlegend",
     "template": "https://disaportaldata.gsi.go.jp/raster/05_tsunami_newlegend/{z}/{x}/{y}.png",
     "prefOrData": "pref-or-data",
+    "isPrefBased": false,
+    "fallbackToNational": false,
     "minzoom": 2,
     "maxzoom": 17
   },
@@ -41,6 +49,8 @@
     "directory": "06_takashio_soutei",
     "template": "https://disaportaldata.gsi.go.jp/raster/06_takashio_soutei/{z}/{x}/{y}.png",
     "prefOrData": "pref-or-data",
+    "isPrefBased": false,
+    "fallbackToNational": false,
     "minzoom": 2,
     "maxzoom": 17
   },
@@ -59,6 +69,8 @@
     "directory": "08_road_kansui",
     "template": "https://disaportaldata.gsi.go.jp/raster/08_road_kansui/{z}/{x}/{y}.png",
     "prefOrData": "pref-or-data",
+    "isPrefBased": false,
+    "fallbackToNational": false,
     "minzoom": 2,
     "maxzoom": 17
   },
