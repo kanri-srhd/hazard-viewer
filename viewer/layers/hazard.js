@@ -22,21 +22,15 @@ const layerState = {};
 function buildTileUrl(config, prefCode) {
     const base = "https://disaportaldata.gsi.go.jp/raster";
 
-    // pref-data 付き（GSI公式色付きタイル）
     if (config.prefOrData === "pref-or-data" && prefCode) {
-        const dir = `${config.directory}_pref_data/${prefCode}`;
-        return `${base}/${dir}/{z}/{x}/{y}.png`;
+        return `${base}/${config.directory}_pref_data/${prefCode}/{z}/{x}/{y}.png`;
     }
 
-    // data 版（pref指定なし）
     if (config.prefOrData === "data") {
         return `${base}/${config.directory}/{z}/{x}/{y}.png`;
     }
 
-    // APIタイプ（MLIT液状化）
-    if (config.prefOrData === "api") {
-        return config.template;
-    }
+    return config.template;
 }
 
 // ----------------------------------------------------------------------
