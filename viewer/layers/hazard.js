@@ -73,16 +73,13 @@ export function initHazardLayers(map, getPrefCode, getOpacity) {
 
         // レイヤー追加
         if (!map.getLayer(layerId)) {
-            map.addLayer(
-                {
-                    id: layerId,
-                    type: "raster",
-                    source: sourceId,
-                    layout: { visibility: "none" },
-                    paint: { "raster-opacity": opacity }
-                },
-                "gsi-bldg-outline"
-            );
+            map.addLayer({
+                id: layerId,
+                type: "raster",
+                source: sourceId,
+                layout: { visibility: "none" },
+                paint: { "raster-opacity": opacity }
+            });
         }
 
         console.log(`[hazard] Added layer: ${layerId}`);
@@ -129,16 +126,13 @@ export function updateHazardPref(prefCode) {
             tileSize: 256
         });
 
-        mapInstance.addLayer(
-            {
-                id: layerId,
-                type: "raster",
-                source: sourceId,
-                layout: { visibility: prev.visibility },
-                paint: { "raster-opacity": prev.opacity }
-            },
-            "gsi-bldg-outline"
-        );
+        mapInstance.addLayer({
+            id: layerId,
+            type: "raster",
+            source: sourceId,
+            layout: { visibility: prev.visibility },
+            paint: { "raster-opacity": prev.opacity }
+        });
 
         console.log(`[hazard] Refreshed layer: ${layerId}`);
     }
