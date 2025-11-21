@@ -147,24 +147,15 @@ map.on("load", () => {
     // 統合レイヤートグルUI生成
     // --------------------------------------------------
     createLayerToggleUI(map, {
-        // ハザードトグル
-        toggleFlood: (checked) => toggleHazard("flood", checked),
-        toggleSediment: (checked) => toggleHazard("sediment", checked),
-        toggleTsunami: (checked) => toggleHazard("tsunami", checked),
-        toggleLiquefaction: (checked) => toggleHazard("liquefaction", checked),
-
         // 航空写真トグル
         togglePhoto: (checked) => {
             map.setLayoutProperty("gsi-photo-layer", "visibility", checked ? "visible" : "none");
         },
 
-        // その他（プレースホルダー）
+        // その他レイヤー（プレースホルダー）
         toggleGrid: (checked) => console.log("送電網:", checked),
         toggleJiban: (checked) => console.log("地番:", checked),
-        toggleCapacity: (checked) => console.log("空き容量:", checked),
-
-        // 都道府県変更（setupPrefSelect で上書き）
-        onPrefChange: null
+        toggleCapacity: (checked) => console.log("空き容量:", checked)
     });
 
     // --------------------------------------------------
