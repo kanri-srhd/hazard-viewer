@@ -1,5 +1,5 @@
 // ======================================================================
-// viewer/layers/ui.js - Google Maps完全模倣UI + SVGアイコンテーマ
+// viewer/layers/ui.js - Google Maps完全模倣UI + hazardMatrix自動生成版
 // 
 // 機能:
 // - PC: 左スライドイン Drawer
@@ -9,9 +9,12 @@
 // - 透明度スライダー
 // - レスポンシブ自動判定
 // - カテゴリー順序: 地番 → ハザード → 電力 → 地図
-// - 都道府県セレクトUIを完全削除
+// - ハザードレイヤーは hazardMatrix.js から自動生成
 // - Google Maps風SVGアイコンセット
 // ======================================================================
+
+import { hazardMatrix } from "../../data/hazardMatrix.js";
+import { toggleHazard } from "./hazard.js";
 
 let isPanelOpen = false;
 let isMobile = false;
@@ -199,40 +202,33 @@ function createJibanSection(panel, callbacks) {
 }
 
 /**
- * ハザードセクション（第2カテゴリー）
+ * ハザードセクション（第2カテゴリー）- hazardMatrix から自動生成
  */
 function createHazardSection(panel, map, callbacks) {
-    const section = createSection("🌊 ハザードレイヤー", [
-        {
-            id: "flood",
-            icon: "💧",
-            label: "洪水（浸水深）",
-            layerId: "flood-layer",
-            toggle: callbacks.toggleFlood
-        },
-        {
-            id: "sediment",
-            icon: "🏔",
-            label: "土砂災害",
-            layerId: "sediment-layer",
-            toggle: callbacks.toggleSediment
-        },
-        {
-            id: "tsunami",
-            icon: "🌊",
-            label: "津波浸水",
-            layerId: "tsunami-layer",
-            toggle: callbacks.toggleTsunami
-        },
-        {
-            id: "liquefaction",
-            icon: "🏗",
-            label: "液状化",
-            layerId: "liquefaction-layer",
-            toggle: callbacks.toggleLiquefaction
-        }
-    ], map, true);
+    // hazardMatrix から UI アイテムを自動生成
+    const hazardItems = [];
 
+    for (const [layerId, config] of Object.entries(hazardMatrix)) {
+        // アイコンを自動判定（layerId のプレフィックスから）
+        let icon = "🌐";
+        if (layerId.startsWith("flood_")) icon = "💧";
+        else if (layerId.startsWith("sediment_")) icon = "🏔";
+        else if (layerId.startsWith("tsunami_")) icon = "🌊";
+        else if (layerId.startsWith("takashio_")) icon = "🌀";
+        else if (layerId.startsWith("jishin_")) icon = "🏚";
+        else if (layerId.startsWith("road_")) icon = "🚧";
+        else if (layerId.includes("liquefaction")) icon = "🏗";
+
+        hazardItems.push({
+            id: layerId,
+            icon: icon,
+            label: config.title,
+            layerId: layerId,  // レイヤーIDをそのまま使用
+            toggle: (checked) => toggleHazard(layerId, checked)
+        });
+    }
+
+    const section = createSection("🌊 ハザードレイヤー", hazardItems, map, true);
     panel.appendChild(section);
 }
 
