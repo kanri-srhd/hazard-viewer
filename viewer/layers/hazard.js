@@ -20,16 +20,24 @@ const layerState = {};
 // URL生成（prefOrData による自動分岐）
 // ----------------------------------------------------------------------
 function buildTileUrl(config, prefCode) {
+    // MLIT API など
+    if (config.prefOrData === "api") {
+        return config.template;
+    }
+
     const base = "https://disaportaldata.gsi.go.jp/raster";
 
+    // 都道府県別タイル
     if (config.prefOrData === "pref-or-data" && prefCode) {
         return `${base}/${config.directory}_pref_data/${prefCode}/{z}/{x}/{y}.png`;
     }
 
+    // 全国統一タイル
     if (config.prefOrData === "data") {
         return `${base}/${config.directory}/{z}/{x}/{y}.png`;
     }
 
+    // それ以外は template を返す
     return config.template;
 }
 
