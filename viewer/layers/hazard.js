@@ -27,13 +27,14 @@ function buildTileUrl(config, prefCode) {
         return config.template;  // そのまま使用
     }
 
-    // pref-data 付き
+    // pref-data 付き（GSI仕様に準拠）
     if (config.prefOrData === "pref-or-data" && prefCode) {
-        return `${base}/pref_data/${prefCode}/${config.directory}/{z}/{x}/{y}.png`;
+        const dir = config.directory.replace("_data", `_pref_data/${prefCode}`);
+        return `${base}/${dir}/{z}/{x}/{y}.png`;
     }
 
     // data 版（pref指定なし）
-    return `${base}/data/${config.directory}/{z}/{x}/{y}.png`;
+    return `${base}/${config.directory}/{z}/{x}/{y}.png`;
 }
 
 // ----------------------------------------------------------------------
