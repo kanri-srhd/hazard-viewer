@@ -27,10 +27,9 @@ function buildTileUrl(config, prefCode) {
         return config.template;  // そのまま使用
     }
 
-    // pref-data 付き（GSI仕様に準拠）
+    // pref-data 付き（GSI公式色付きタイル）
     if (config.prefOrData === "pref-or-data" && prefCode) {
-        const dir = config.directory.replace("_data", `_pref_data/${prefCode}`);
-        return `${base}/${dir}/{z}/{x}/{y}.png`;
+        return `${base}/${config.directory}_pref_data/${prefCode}/{z}/{x}/{y}.png`;
     }
 
     // data 版（pref指定なし）
