@@ -7,7 +7,7 @@
 // レイヤーは今後 hazardMatrix.js の追加だけで拡張可能。
 // ======================================================================
 
-import { hazardMatrix } from "../data/hazardMatrix.js";
+import { hazardMatrix } from "../../data/hazardMatrix.js";
 
 let mapInstance = null;
 let currentPrefCode = null;
