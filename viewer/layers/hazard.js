@@ -16,74 +16,14 @@ let currentPrefCode = null;
 const layerState = {};  
 // { layerId: { opacity: 0.75, visibility: "none" } }
 
-// 404エラーログ抑制用（同一URLは1回だけ警告）
-const errorLoggedUrls = new Set();
-
 // ----------------------------------------------------------------------
-// 透明1x1 PNG（404フェイルオーバー用）
+// URL生成（GSI flat構造完全準拠版）
 // ----------------------------------------------------------------------
-const TRANSPARENT_TILE = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAAC0lEQVQYV2NgAAIAAAUAAarVyFEAAAAASUVORK5CYII=';
-
-// ----------------------------------------------------------------------
-// URL生成（prefOrData による自動分岐 + フェイルオーバー対応）
-// GSI公式サブフォルダ構造: raster/{directory}/{pref}/{z}/{x}/{y}.png
-// ----------------------------------------------------------------------
-function buildTileUrl(config, prefCode, useFallback = false) {
-    // MLIT API など
-    if (config.prefOrData === "api") {
-        return config.template;
-    }
-
+function buildTileUrl(config, prefCode) {
     const base = "https://disaportaldata.gsi.go.jp/raster";
 
-    // フェイルオーバー時は全国版を強制使用
-    if (useFallback) {
-        return `${base}/${config.directory}/{z}/{x}/{y}.png`;
-    }
-
-    // 都道府県別タイル（isPrefBased フラグ考慮）
-    // GSI公式構造: raster/{directory}/{pref}/{z}/{x}/{y}.png
-    if (config.prefOrData === "pref-or-data" && prefCode && config.isPrefBased) {
-        return `${base}/${config.directory}/${prefCode}/{z}/{x}/{y}.png`;
-    }
-
-    // 全国統一タイル
-    if (config.prefOrData === "data") {
-        return `${base}/${config.directory}/{z}/{x}/{y}.png`;
-    }
-
-    // それ以外は template を返す
-    return config.template;
-}
-
-// ----------------------------------------------------------------------
-// タイルエラーハンドラ（404時にフェイルオーバー）
-// ----------------------------------------------------------------------
-function setupTileErrorHandler(map, sourceId, config, prefCode) {
-    if (!config.fallbackToNational) return;
-
-    map.on('error', (e) => {
-        if (e.source && e.source.id === sourceId) {
-            const url = e.tile?.url;
-            if (url && !errorLoggedUrls.has(url)) {
-                console.warn(`[hazard] Tile 404 detected, using fallback: ${sourceId}`);
-                errorLoggedUrls.add(url);
-                
-                // フェイルオーバーURL生成
-                const fallbackUrl = buildTileUrl(config, prefCode, true);
-                
-                // ソースを全国版に切り替え
-                if (map.getSource(sourceId)) {
-                    map.removeSource(sourceId);
-                }
-                map.addSource(sourceId, {
-                    type: "raster",
-                    tiles: [fallbackUrl],
-                    tileSize: 256
-                });
-            }
-        }
-    });
+    // 全国版のみ（prefOrData はすべて "data"）
+    return `${base}/${config.directory}/{z}/{x}/{y}.png`;
 }
 
 // ----------------------------------------------------------------------
@@ -120,9 +60,6 @@ export function initHazardLayers(map, getPrefCode, getOpacity) {
                 tileSize: 256
             });
         }
-
-        // 404フェイルオーバーハンドラ設定
-        setupTileErrorHandler(map, sourceId, config, currentPrefCode);
 
         // レイヤー追加
         if (!map.getLayer(layerId)) {
@@ -178,9 +115,6 @@ export function updateHazardPref(prefCode) {
             tiles: [newUrl],
             tileSize: 256
         });
-
-        // 404フェイルオーバーハンドラ設定
-        setupTileErrorHandler(mapInstance, sourceId, config, currentPrefCode);
 
         mapInstance.addLayer({
             id: layerId,
