@@ -14,7 +14,7 @@
 // ======================================================================
 
 import { detectPrefecture } from "./utils/prefDetect.js";
-import { initializeHazardLayers, setPrefCode, toggleHazard } from "./layers/hazard.js";
+import { initHazardLayers, updateHazardPref, toggleHazard } from "./layers/hazard.js";
 import { parseInput } from "./utils/geocode.js";
 import { createLayerToggleUI, adjustPanelSize } from "./layers/ui.js";
 
@@ -136,7 +136,7 @@ map.on("load", () => {
     // --------------------------------------------------
     // ハザードレイヤー初期化
     // --------------------------------------------------
-    initializeHazardLayers(map);
+    initHazardLayers(map, () => currentPrefCode);
 
     // --------------------------------------------------
     // Google Maps風コントロール追加
@@ -319,7 +319,7 @@ function updatePrefectureByCoords(lat, lng) {
     currentPrefCode = prefCode;
 
     // ハザードレイヤーの県コード更新
-    setPrefCode(prefCode);
+    updateHazardPref(prefCode);
 
     // UIセレクトボックス同期
     const prefSelect = document.getElementById("prefSelect");
@@ -431,7 +431,7 @@ function setupPrefSelect() {
         prefSelectChanging = true;
 
         currentPrefCode = prefCode;
-        setPrefCode(prefCode);
+        updateHazardPref(prefCode);
 
         // 300ms 後にフラグを解除
         setTimeout(() => {
