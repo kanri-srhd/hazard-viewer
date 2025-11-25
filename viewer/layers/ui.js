@@ -205,10 +205,21 @@ function createJibanSection(panel, callbacks) {
  * ハザードセクション（第2カテゴリー）- hazardMatrix から自動生成
  */
 function createHazardSection(panel, map, callbacks) {
+    // UIに表示するレイヤーのみを制限
+    const allowed = [
+        "flood_keikaku",
+        "sediment_keikai",
+        "tsunami_newlegend",
+        "mlit_liquefaction"
+    ];
+
     // hazardMatrix から UI アイテムを自動生成
     const hazardItems = [];
 
     for (const [layerId, config] of Object.entries(hazardMatrix)) {
+        // UIに表示しないレイヤーはスキップ
+        if (!allowed.includes(layerId)) continue;
+
         // アイコンを自動判定（layerId のプレフィックスから）
         let icon = "🌐";
         if (layerId.startsWith("flood_")) icon = "💧";
