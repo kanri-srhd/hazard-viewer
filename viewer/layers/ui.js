@@ -202,45 +202,100 @@ function createJibanSection(panel, callbacks) {
 }
 
 /**
+ * hazardGroup に基づいてアイコンを判定
+ */
+function chooseIconByHazardGroup(hazardGroup, layerId) {
+    switch (hazardGroup) {
+        case "flood":
+            return "💧";
+        case "landslide":
+            return "⛰";
+        case "tsunami":
+            return "🌊";
+        case "storm_surge":
+            return "🌀";
+        case "liquefaction":
+            return "🏗";
+        case "earthquake":
+            return "🏚";
+        default:
+            if (layerId === "road_kansui") return "🚧";
+            return "🌐";
+    }
+}
+
+/**
  * ハザードセクション（第2カテゴリー）- hazardMatrix から自動生成
+ * 全8レイヤーをカテゴリ別に表示
  */
 function createHazardSection(panel, map, callbacks) {
-    // UIに表示するレイヤーのみを制限
-    const allowed = [
-        "flood_l2_shinsuishin",   // 洪水浸水想定区域（想定最大規模）
-        "sediment_keikai",        // 土砂災害警戒区域（急傾斜地の崩壊）
-        "tsunami_newlegend",      // 津波浸水想定
-        "mlit_liquefaction"       // 液状化（MLIT全国）
-    ];
+    // UIに表示する8レイヤー
+    const TARGET_LAYERS = new Set([
+        "flood_l2_shinsuishin",
+        "flood_keikaku",
+        "sediment_keikai",
+        "tsunami_newlegend",
+        "takashio_soutei",
+        "mlit_liquefaction",
+        "jishin_kyouka",
+        "road_kansui"
+    ]);
 
-    // hazardMatrix から UI アイテムを自動生成
-    const hazardItems = [];
+    // カテゴリ別配列
+    const flood = [];
+    const landslide = [];
+    const coastal = [];
+    const ground = [];
+    const access = [];
 
+    // hazardMatrix から対象レイヤーを抽出してカテゴリ分け
     for (const [layerId, config] of Object.entries(hazardMatrix)) {
-        // UIに表示しないレイヤーはスキップ
-        if (!allowed.includes(layerId)) continue;
+        if (!TARGET_LAYERS.has(layerId)) continue;
 
-        // アイコンを自動判定（layerId のプレフィックスから）
-        let icon = "🌐";
-        if (layerId.startsWith("flood_")) icon = "💧";
-        else if (layerId.startsWith("sediment_")) icon = "🏔";
-        else if (layerId.startsWith("tsunami_")) icon = "🌊";
-        else if (layerId.startsWith("takashio_")) icon = "🌀";
-        else if (layerId.startsWith("jishin_")) icon = "🏚";
-        else if (layerId.startsWith("road_")) icon = "🚧";
-        else if (layerId.includes("liquefaction")) icon = "🏗";
+        const meta = config.metadata || {};
+        const hazardGroup = meta.hazardGroup;
+        const icon = chooseIconByHazardGroup(hazardGroup, layerId);
 
-        hazardItems.push({
+        const item = {
             id: layerId,
             icon: icon,
             label: config.title,
-            layerId: layerId,  // レイヤーIDをそのまま使用
+            layerId: layerId,
             toggle: (checked) => toggleHazard(layerId, checked)
-        });
+        };
+
+        // hazardGroup に基づいてカテゴリ分け
+        if (hazardGroup === "flood") {
+            flood.push(item);
+        } else if (hazardGroup === "landslide") {
+            landslide.push(item);
+        } else if (hazardGroup === "tsunami" || hazardGroup === "storm_surge") {
+            coastal.push(item);
+        } else if (hazardGroup === "liquefaction" || hazardGroup === "earthquake") {
+            ground.push(item);
+        } else if (layerId === "road_kansui") {
+            access.push(item);
+        } else {
+            console.warn(`[ui] Unhandled layer: ${layerId} (group: ${hazardGroup})`);
+        }
     }
 
-    const section = createSection("🌊 ハザードレイヤー", hazardItems, map, true);
-    panel.appendChild(section);
+    // カテゴリごとにセクション作成（順序固定: 洪水 → 土砂 → 津波・高潮 → 地盤・地震 → 道路冠水）
+    if (flood.length > 0) {
+        panel.appendChild(createSection("💧 洪水", flood, map, true));
+    }
+    if (landslide.length > 0) {
+        panel.appendChild(createSection("⛰ 土砂", landslide, map, true));
+    }
+    if (coastal.length > 0) {
+        panel.appendChild(createSection("🌊 津波・高潮", coastal, map, true));
+    }
+    if (ground.length > 0) {
+        panel.appendChild(createSection("🛟 地盤・地震", ground, map, true));
+    }
+    if (access.length > 0) {
+        panel.appendChild(createSection("🚧 道路冠水", access, map, true));
+    }
 }
 
 /**

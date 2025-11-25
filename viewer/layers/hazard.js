@@ -17,13 +17,23 @@ const layerState = {};
 // { layerId: { opacity: 0.75, visibility: "none" } }
 
 // ----------------------------------------------------------------------
-// URL生成（GSI flat構造完全準拠版）
+// URL生成（hazardMatrix.json の template を最優先）
 // ----------------------------------------------------------------------
 function buildTileUrl(config, prefCode) {
-    const base = "https://disaportaldata.gsi.go.jp/raster";
-
-    // 全国版のみ（prefOrData はすべて "data"）
-    return `${base}/${config.directory}/{z}/{x}/{y}.png`;
+    // template が存在する場合は最優先で使用
+    if (config.template) {
+        return config.template;
+    }
+    
+    // フォールバック: directory から構築（基本的に使われない想定）
+    if (config.directory) {
+        const base = "https://disaportaldata.gsi.go.jp/raster";
+        return `${base}/${config.directory}/{z}/{x}/{y}.png`;
+    }
+    
+    // 両方ない場合はエラー
+    console.error(`[hazard] No template or directory for layer: ${config.id}`);
+    throw new Error(`No template or directory in hazardMatrix for ${config.id}`);
 }
 
 // ----------------------------------------------------------------------
