@@ -64,11 +64,12 @@ const ID_MAPPING = {
 // DIRECTORY MAPPING: WMTS directory → Project directory
 // ================================================================================
 const DIRECTORY_MAPPING = {
+  // Use actual GSI directory names (no remapping)
   "01_flood_l2_shinsuishin_data": "01_flood_l2_shinsuishin_data",
-  "01_flood_l1_shinsuishin_newlegend_data": "02_flood_l2_keikakukibo_data",
+  "01_flood_l1_shinsuishin_newlegend_data": "01_flood_l1_shinsuishin_newlegend_data",
   "05_kyukeishakeikaikuiki": "05_kyukeishakeikaikuiki",
-  "04_tsunami_newlegend_data": "05_tsunami_newlegend_data",
-  "03_hightide_l2_shinsuishin_data": "06_takashio_soutei_data",
+  "04_tsunami_newlegend_data": "04_tsunami_newlegend_data",
+  "03_hightide_l2_shinsuishin_data": "03_hightide_l2_shinsuishin_data",
 
   // Identity mappings to avoid undefined
   "01_flood_l2_shinsuishin_kuni_data": "01_flood_l2_shinsuishin_kuni_data",

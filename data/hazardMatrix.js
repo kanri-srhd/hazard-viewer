@@ -22,8 +22,8 @@ export const hazardMatrix = {
   "flood_keikaku": {
     "id": "flood_keikaku",
     "title": "洪水浸水想定区域（計画規模（現在の凡例））",
-    "directory": "02_flood_l2_keikakukibo_data",
-    "template": "https://disaportaldata.gsi.go.jp/raster/02_flood_l2_keikakukibo_data/{z}/{x}/{y}.png",
+    "directory": "01_flood_l1_shinsuishin_newlegend_data",
+    "template": "https://disaportaldata.gsi.go.jp/raster/01_flood_l1_shinsuishin_newlegend_data/{z}/{x}/{y}.png",
     "prefOrData": "data",
     "minzoom": 2,
     "maxzoom": 17,
@@ -56,8 +56,8 @@ export const hazardMatrix = {
   "tsunami_newlegend": {
     "id": "tsunami_newlegend",
     "title": "津波浸水想定_統合版",
-    "directory": "05_tsunami_newlegend_data",
-    "template": "https://disaportaldata.gsi.go.jp/raster/05_tsunami_newlegend_data/{z}/{x}/{y}.png",
+    "directory": "04_tsunami_newlegend_data",
+    "template": "https://disaportaldata.gsi.go.jp/raster/04_tsunami_newlegend_data/{z}/{x}/{y}.png",
     "prefOrData": "data",
     "minzoom": 2,
     "maxzoom": 17,
@@ -73,8 +73,8 @@ export const hazardMatrix = {
   "takashio_soutei": {
     "id": "takashio_soutei",
     "title": "高潮浸水想定区域_統合版",
-    "directory": "06_takashio_soutei_data",
-    "template": "https://disaportaldata.gsi.go.jp/raster/06_takashio_soutei_data/{z}/{x}/{y}.png",
+    "directory": "03_hightide_l2_shinsuishin_data",
+    "template": "https://disaportaldata.gsi.go.jp/raster/03_hightide_l2_shinsuishin_data/{z}/{x}/{y}.png",
     "prefOrData": "data",
     "minzoom": 2,
     "maxzoom": 17,
