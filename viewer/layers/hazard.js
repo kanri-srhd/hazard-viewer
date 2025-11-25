@@ -68,11 +68,13 @@ export function initHazardLayers(map, getPrefCode, getOpacity) {
                 type: "raster",
                 source: sourceId,
                 layout: { visibility: "none" },
-                paint: { "raster-opacity": opacity }
+                paint: { "raster-opacity": opacity },
+                minzoom: config.minzoom ?? 2,
+                maxzoom: config.maxzoom ?? 17
             });
         }
 
-        console.log(`[hazard] Added layer: ${layerId}`);
+        console.log(`[hazard] Added layer: ${layerId} (zoom: ${config.minzoom ?? 2}-${config.maxzoom ?? 17})`);
     }
 
     console.log("[hazard] ✓ All layers initialized (RESET版)");
@@ -121,7 +123,9 @@ export function updateHazardPref(prefCode) {
             type: "raster",
             source: sourceId,
             layout: { visibility: prev.visibility },
-            paint: { "raster-opacity": prev.opacity }
+            paint: { "raster-opacity": prev.opacity },
+            minzoom: config.minzoom ?? 2,
+            maxzoom: config.maxzoom ?? 17
         });
 
         console.log(`[hazard] Refreshed layer: ${layerId}`);
