@@ -207,10 +207,10 @@ function createJibanSection(panel, callbacks) {
 function createHazardSection(panel, map, callbacks) {
     // UIに表示するレイヤーのみを制限
     const allowed = [
-        "flood_keikaku",
-        "sediment_keikai",
-        "tsunami_newlegend",
-        "mlit_liquefaction"
+        "flood_l2_shinsuishin",   // 洪水浸水想定区域（想定最大規模）
+        "sediment_keikai",        // 土砂災害警戒区域（急傾斜地の崩壊）
+        "tsunami_newlegend",      // 津波浸水想定
+        "mlit_liquefaction"       // 液状化（MLIT全国）
     ];
 
     // hazardMatrix から UI アイテムを自動生成
