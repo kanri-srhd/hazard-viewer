@@ -254,7 +254,7 @@ function getInfraStats() {
 // --------------------------------------------
 // エクスポート
 // --------------------------------------------
-window.PowerInfraLayer = {
+export const PowerInfraLayer = {
     add: addPowerInfraLayer,
     toggle: togglePowerInfra,
     isVisible: () => isVisible,
