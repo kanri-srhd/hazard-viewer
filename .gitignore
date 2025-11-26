@@ -43,6 +43,9 @@ tiles/
 !geojson/*.geojson
 !geojson/*.pmtiles
 
+# Allow OSM power data for viewer
+!data/power/osm/*.geojson
+
 # Allow capacity json for viewer
 !data/capacity/*.json
 !data/capacity/history/**

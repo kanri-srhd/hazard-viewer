@@ -1,51 +1,51 @@
 export const powerMatrix = {
-  "grid_lines_occto": {
-    "type": "line",
-    "sourceType": "geojson",
-    "source": "../data/power/grid/occto.geojson",
-    "title": "基幹送電線（OCCTO）",
-    "minzoom": 6,
-    "maxzoom": 17,
-    "metadata": {
-      "category": "power",
-      "subtype": "grid_lines",
-      "voltageClasses": ["500kV", "275kV", "154kV"],
-      "provider": "OCCTO",
-      "updateCadence": "manual",
-      "schemaVersion": "v1"
-    }
-  },
-  "grid_lines_osm": {
-    "type": "line",
-    "sourceType": "geojson",
-    "source": "../data/power/grid/osm.geojson",
-    "title": "地内送電線（OSM）",
-    "minzoom": 6,
-    "maxzoom": 17,
-    "metadata": {
-      "category": "power",
-      "subtype": "grid_lines",
-      "voltageClasses": ["22kV", "33kV", "66kV", "77kV"],
-      "provider": "OSM",
-      "updateCadence": "monthly",
-      "schemaVersion": "v1"
-    }
-  },
-  "substations_osm": {
-    "type": "symbol",
-    "sourceType": "geojson",
-    "source": "../data/power/substations/osm.geojson",
-    "title": "変電所（OSM）",
-    "minzoom": 6,
-    "maxzoom": 17,
-    "metadata": {
-      "category": "power",
-      "subtype": "substations",
-      "provider": "OSM",
-      "updateCadence": "monthly",
-      "schemaVersion": "v1"
-    }
-  },
+  // "grid_lines_occto": {
+  //   "type": "line",
+  //   "sourceType": "geojson",
+  //   "source": "../data/power/grid/occto.geojson",
+  //   "title": "基幹送電線（OCCTO）",
+  //   "minzoom": 6,
+  //   "maxzoom": 17,
+  //   "metadata": {
+  //     "category": "power",
+  //     "subtype": "grid_lines",
+  //     "voltageClasses": ["500kV", "275kV", "154kV"],
+  //     "provider": "OCCTO",
+  //     "updateCadence": "manual",
+  //     "schemaVersion": "v1"
+  //   }
+  // },
+  // "grid_lines_osm": {
+  //   "type": "line",
+  //   "sourceType": "geojson",
+  //   "source": "../data/power/grid/osm.geojson",
+  //   "title": "地内送電線（OSM）",
+  //   "minzoom": 6,
+  //   "maxzoom": 17,
+  //   "metadata": {
+  //     "category": "power",
+  //     "subtype": "grid_lines",
+  //     "voltageClasses": ["22kV", "33kV", "66kV", "77kV"],
+  //     "provider": "OSM",
+  //     "updateCadence": "monthly",
+  //     "schemaVersion": "v1"
+  //   }
+  // },
+  // "substations_osm": {
+  //   "type": "symbol",
+  //   "sourceType": "geojson",
+  //   "source": "../data/power/substations/osm.geojson",
+  //   "title": "変電所（OSM）",
+  //   "minzoom": 6,
+  //   "maxzoom": 17,
+  //   "metadata": {
+  //     "category": "power",
+  //     "subtype": "substations",
+  //     "provider": "OSM",
+  //     "updateCadence": "monthly",
+  //     "schemaVersion": "v1"
+  //   }
+  // },
   // "capacity_nationwide": {
   //   "type": "point",
   //   "sourceType": "json",
