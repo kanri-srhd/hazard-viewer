@@ -1,0 +1,77 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://hazard-viewer.local/schemas/capacity.json",
+  "title": "Power Capacity Data Schema",
+  "description": "Schema for power grid capacity data entries",
+  "type": "object",
+  "required": ["id", "name", "utility", "voltage_kv", "available_kw", "updated_at"],
+  "properties": {
+    "id": {
+      "type": "string",
+      "description": "Unique identifier for the capacity entry",
+      "minLength": 1
+    },
+    "name": {
+      "type": "string",
+      "description": "Facility name (substation or transmission line)",
+      "minLength": 1
+    },
+    "name_original": {
+      "type": "string",
+      "description": "Original facility name before normalization"
+    },
+    "name_normalized": {
+      "type": "string",
+      "description": "Normalized facility name"
+    },
+    "utility": {
+      "type": "string",
+      "description": "Power utility company identifier",
+      "enum": ["TEPCO", "CHUDEN", "KEPCO", "KYUDEN", "HOKUDEN", "TOHOKU", "HEPCO", "RIKUDEN", "YONDEN", "ENERGIA"]
+    },
+    "voltage_kv": {
+      "type": "number",
+      "description": "Voltage class in kilovolts",
+      "minimum": 0,
+      "maximum": 1000
+    },
+    "available_kw": {
+      "type": "number",
+      "description": "Available capacity in kilowatts",
+      "minimum": 0
+    },
+    "updated_at": {
+      "type": "string",
+      "description": "Last update date (ISO 8601 format: YYYY-MM-DD)",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+    },
+    "lat": {
+      "type": ["number", "null"],
+      "description": "Latitude coordinate (WGS84)",
+      "minimum": -90,
+      "maximum": 90
+    },
+    "lon": {
+      "type": ["number", "null"],
+      "description": "Longitude coordinate (WGS84)",
+      "minimum": -180,
+      "maximum": 180
+    },
+    "matched_source": {
+      "type": "string",
+      "description": "Source of geocoding match",
+      "enum": ["nominatim", "gsi", "occto", "grid_lines", "manual", "unmatched"]
+    },
+    "confidence": {
+      "type": "number",
+      "description": "Geocoding confidence score (0.0 to 1.0)",
+      "minimum": 0,
+      "maximum": 1
+    },
+    "notes": {
+      "type": "string",
+      "description": "Additional notes or metadata"
+    }
+  },
+  "additionalProperties": false
+}

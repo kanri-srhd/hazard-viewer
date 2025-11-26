@@ -29,9 +29,34 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import https from 'https';
+import Ajv from 'ajv';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+
+// Load and compile JSON Schema for validation
+const schemaPath = path.join(__dirname, 'schemas', 'capacity_schema.json');
+let validate = null;
+let ajv = null;
+
+function loadSchema() {
+  if (validate) return;
+  
+  if (!fs.existsSync(schemaPath)) {
+    console.warn('[geo-locator] Schema not found, validation disabled:', schemaPath);
+    return;
+  }
+  
+  try {
+    const schemaContent = fs.readFileSync(schemaPath, 'utf-8');
+    const schema = JSON.parse(schemaContent);
+    ajv = new Ajv({ allErrors: true });
+    validate = ajv.compile(schema);
+    console.log('[geo-locator] Schema loaded and compiled');
+  } catch (error) {
+    console.warn('[geo-locator] Schema load failed, validation disabled:', error.message);
+  }
+}
 
 function parseArgs() {
   const args = process.argv.slice(2);
@@ -325,6 +350,10 @@ async function locateRow(row, occtoFeatures, gridLines, aliases) {
 
 async function main() {
   console.log('[geo-locator] Input CSV:', inputCsv);
+  
+  // Load schema for validation
+  loadSchema();
+  
   const rows = readCSV(inputCsv);
   console.log('[geo-locator] Rows:', rows.length);
   const occtoFeatures = loadOCCTO(occtoPath);
@@ -335,7 +364,10 @@ async function main() {
   console.log('[geo-locator] Aliases loaded:', Object.keys(aliases.aliases || {}).length);
 
   const out = [];
+  const validEntries = [];
+  const invalidEntries = [];
   let processed = 0;
+  
   for (const row of rows) {
     if (processed >= maxRows) break;
     let located;
@@ -352,12 +384,14 @@ async function main() {
         notes: String(e && e.message || e)
       };
     }
-    out.push({
+    
+    const entry = {
       id: row.id,
+      name: located.name_normalized,
       name_original: located.name_original,
       name_normalized: located.name_normalized,
       utility: row.utility || null,
-      voltage_kv: row.voltage_kv ? parseInt(row.voltage_kv, 10) : null,
+      voltage_kv: row.voltage_kv ? parseFloat(row.voltage_kv) : null,
       available_kw: row.available_kw ? parseFloat(row.available_kw) : null,
       updated_at: row.updated_at || null,
       lat: located.lat,
@@ -365,12 +399,39 @@ async function main() {
       matched_source: located.matched_source,
       confidence: located.confidence,
       notes: located.notes
-    });
+    };
+    
+    // Validate entry if schema is loaded
+    if (validate) {
+      const valid = validate(entry);
+      if (!valid) {
+        const errors = ajv.errorsText(validate.errors);
+        console.warn(`\n[geo-locator] Validation failed for entry ${entry.id}: ${errors}`);
+        invalidEntries.push({ entry, errors });
+      } else {
+        validEntries.push(entry);
+      }
+    }
+    
+    out.push(entry);
     processed++;
     process.stdout.write(`\rProcessed ${processed}/${Math.min(rows.length, maxRows)}`);
   }
+  
+  // Write output (includes both valid and invalid if validation is disabled)
   fs.writeFileSync(outJson, JSON.stringify(out, null, 2));
   console.log(`\n[geo-locator] Written: ${outJson}`);
+  
+  // Validation summary
+  if (validate) {
+    console.log(`[geo-locator] Validation: ${validEntries.length} valid, ${invalidEntries.length} invalid`);
+    if (invalidEntries.length > 0) {
+      console.log(`[geo-locator] Invalid entries:`);
+      invalidEntries.forEach(({ entry, errors }) => {
+        console.log(`  - ${entry.id}: ${errors}`);
+      });
+    }
+  }
   // Unmatched summary
   const unmatched = out.filter(r => r.matched_source === 'unmatched').length;
   const matched = out.filter(r => r.matched_source !== 'unmatched' && r.matched_source !== 'error').length;
