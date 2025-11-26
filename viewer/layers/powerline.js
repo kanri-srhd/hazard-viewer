@@ -36,7 +36,8 @@ export async function addPowerlineLayer(map) {
       source: 'powerlines-osm',
       layout: {
         'line-join': 'round',
-        'line-cap': 'round'
+        'line-cap': 'round',
+        'visibility': 'visible'
       },
       paint: {
         'line-color': [

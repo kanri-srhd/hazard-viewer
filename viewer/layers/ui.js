@@ -350,6 +350,7 @@ function createPowerSection(panel, map) {
         icon: "⚡",
         label: "送電線（154kV+）",
         layerId: "powerlines-osm-lines",
+        defaultChecked: true,
         toggle: (checked) => {
             if (typeof togglePowerlineLayer !== 'undefined') {
                 togglePowerlineLayer(map, checked);
@@ -452,6 +453,7 @@ function createLayerItem(item, map, hasOpacity) {
     const checkbox = document.createElement("input");
     checkbox.type = "checkbox";
     checkbox.id = `chk-${item.id}`;
+    checkbox.checked = item.defaultChecked || false;
 
     const label = document.createElement("label");
     label.setAttribute("for", `chk-${item.id}`);
@@ -467,6 +469,11 @@ function createLayerItem(item, map, hasOpacity) {
             item.toggle(checkbox.checked);
         }
     });
+
+    // 初期状態を反映
+    if (item.defaultChecked && item.toggle) {
+        setTimeout(() => item.toggle(true), 100);
+    }
 
     // 透明度スライダー（ハザード・航空写真のみ）
     if (hasOpacity && item.layerId && map) {
