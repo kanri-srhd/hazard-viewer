@@ -143,6 +143,17 @@ map.on("load", () => {
     // 電力レイヤー初期化
     // --------------------------------------------------
     initPowerLayers(map);
+    
+    // --------------------------------------------------
+    // 電力インフラレイヤー初期化（変電所・送電線）
+    // --------------------------------------------------
+    if (window.PowerInfraLayer) {
+        window.PowerInfraLayer.add(map).then(() => {
+            console.log('[main] Power infrastructure layer initialized');
+        }).catch(err => {
+            console.error('[main] Failed to initialize power infrastructure layer:', err);
+        });
+    }
 
     // --------------------------------------------------
     // Google Maps風コントロール追加

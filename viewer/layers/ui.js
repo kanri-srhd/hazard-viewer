@@ -321,6 +321,29 @@ function chooseIconByPowerSubtype(subtype) {
  */
 function createPowerSection(panel, map) {
     const items = [];
+    
+    // 電力インフラレイヤー（変電所・送電線）
+    items.push({
+        id: "power_infrastructure",
+        icon: "🔌",
+        label: "電力インフラ（変電所）",
+        layerId: "power-substation-layer",
+        toggle: (checked) => {
+            if (window.PowerInfraLayer) {
+                window.PowerInfraLayer.toggle();
+                
+                // 統計情報を表示
+                if (checked) {
+                    const stats = window.PowerInfraLayer.getStats();
+                    if (stats) {
+                        console.log(`[power-infra] Total: ${stats.total}, With coords: ${stats.withCoords} (${stats.coordsPercentage}%)`);
+                    }
+                }
+            }
+        }
+    });
+    
+    // 既存の電力容量レイヤー
     for (const [id, cfg] of Object.entries(powerMatrix)) {
         const meta = cfg.metadata || {};
         const icon = chooseIconByPowerSubtype(meta.subtype);
@@ -332,6 +355,7 @@ function createPowerSection(panel, map) {
             toggle: (checked) => togglePower(id, checked)
         });
     }
+    
     if (items.length > 0) {
         panel.appendChild(createSection("⚡ 電力", items, map, false));
     }
