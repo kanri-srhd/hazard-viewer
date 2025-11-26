@@ -46,21 +46,21 @@ export const powerMatrix = {
       "schemaVersion": "v1"
     }
   },
-  "capacity_nationwide": {
-    "type": "point",
-    "sourceType": "json",
-    "source": "../data/power/capacity/nationwide_v1.json",
-    "title": "空き容量（全国_v1）",
-    "minzoom": 5,
-    "maxzoom": 17,
-    "metadata": {
-      "category": "power",
-      "subtype": "capacity",
-      "provider": "各電力会社",
-      "updateCadence": "monthly",
-      "schemaVersion": "v1"
-    }
-  },
+  // "capacity_nationwide": {
+  //   "type": "point",
+  //   "sourceType": "json",
+  //   "source": "../data/power/capacity/nationwide_v1.json",
+  //   "title": "空き容量（全国_v1）",
+  //   "minzoom": 5,
+  //   "maxzoom": 17,
+  //   "metadata": {
+  //     "category": "power",
+  //     "subtype": "capacity",
+  //     "provider": "各電力会社",
+  //     "updateCadence": "monthly",
+  //     "schemaVersion": "v1"
+  //   }
+  // },
   "capacity_daily_tepco": {
     "type": "point",
     "sourceType": "json",
@@ -75,32 +75,32 @@ export const powerMatrix = {
       "updateCadence": "daily",
       "schemaVersion": "v1"
     }
-  },
-  "capacity_daily_chuden": {
-    "type": "symbol",
-    "sourceType": "json",
-    "source": "../data/power/capacity/chuden_daily.json",
-    "title": "空き容量（日次・中部）",
-    "minzoom": 6,
-    "maxzoom": 17,
-    "metadata": { "category": "power", "subtype": "capacity" }
-  },
-  "capacity_daily_kepco": {
-    "type": "symbol",
-    "sourceType": "json",
-    "source": "../data/power/capacity/kepco_daily.json",
-    "title": "空き容量（日次・関電）",
-    "minzoom": 6,
-    "maxzoom": 17,
-    "metadata": { "category": "power", "subtype": "capacity" }
-  },
-  "capacity_daily_kyuden": {
-    "type": "symbol",
-    "sourceType": "json",
-    "source": "../data/power/capacity/kyuden_daily.json",
-    "title": "空き容量（日次・九州）",
-    "minzoom": 6,
-    "maxzoom": 17,
-    "metadata": { "category": "power", "subtype": "capacity" }
   }
+  // "capacity_daily_chuden": {
+  //   "type": "symbol",
+  //   "sourceType": "json",
+  //   "source": "../data/power/capacity/chuden_daily.json",
+  //   "title": "空き容量（日次・中部）",
+  //   "minzoom": 6,
+  //   "maxzoom": 17,
+  //   "metadata": { "category": "power", "subtype": "capacity" }
+  // },
+  // "capacity_daily_kepco": {
+  //   "type": "symbol",
+  //   "sourceType": "json",
+  //   "source": "../data/power/capacity/kepco_daily.json",
+  //   "title": "空き容量（日次・関電）",
+  //   "minzoom": 6,
+  //   "maxzoom": 17,
+  //   "metadata": { "category": "power", "subtype": "capacity" }
+  // },
+  // "capacity_daily_kyuden": {
+  //   "type": "symbol",
+  //   "sourceType": "json",
+  //   "source": "../data/power/capacity/kyuden_daily.json",
+  //   "title": "空き容量（日次・九州）",
+  //   "minzoom": 6,
+  //   "maxzoom": 17,
+  //   "metadata": { "category": "power", "subtype": "capacity" }
+  // }
 };
