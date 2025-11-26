@@ -228,6 +228,73 @@ function applyAliases(name, aliases) {
   return aliases.aliases[name] || name;
 }
 
+// Load OSM substations GeoJSON
+function loadOSMSubstations(fp) {
+  if (!fp) return [];
+  if (!fs.existsSync(fp)) {
+    console.log('[geo-locator] OSM substations file not found');
+    return [];
+  }
+  try {
+    const gj = JSON.parse(fs.readFileSync(fp, 'utf8'));
+    const features = gj.features || [];
+    console.log(`[geo-locator] Loaded ${features.length} OSM substations`);
+    return features;
+  } catch (e) {
+    console.warn('Failed to parse OSM substations GeoJSON:', e.message);
+    return [];
+  }
+}
+
+// Match facility name against OSM substations
+function matchOSMSubstation(facilityName, osmSubstations, maxDistanceKm = 10) {
+  if (!osmSubstations || osmSubstations.length === 0) return null;
+  
+  const normalized = normalizeName(facilityName);
+  
+  // Extract candidates with similar names (Levenshtein distance < 3)
+  const candidates = [];
+  for (const feature of osmSubstations) {
+    const osmName = feature.properties?.name || '';
+    const osmNormalized = normalizeName(osmName);
+    
+    if (!osmNormalized) continue;
+    
+    const distance = lev(normalized, osmNormalized);
+    
+    // Accept if name match is close (distance <= 2) or exact substring match
+    if (distance <= 2 || osmNormalized.includes(normalized) || normalized.includes(osmNormalized)) {
+      const coords = feature.geometry?.coordinates || [];
+      if (coords.length === 2) {
+        candidates.push({
+          name: osmName,
+          lat: feature.geometry.type === 'Point' ? coords[1] : null,
+          lon: feature.geometry.type === 'Point' ? coords[0] : null,
+          distance: distance,
+          feature: feature
+        });
+      }
+    }
+  }
+  
+  if (candidates.length === 0) return null;
+  
+  // Sort by name similarity (lower distance = better match)
+  candidates.sort((a, b) => a.distance - b.distance);
+  
+  // Return best match
+  const best = candidates[0];
+  
+  return {
+    lat: best.lat,
+    lon: best.lon,
+    source: 'osm',
+    confidence: best.distance === 0 ? 0.9 : best.distance === 1 ? 0.8 : 0.7,
+    display_name: best.name,
+    osm_id: best.feature.properties?.id || best.feature.id
+  };
+}
+
 // Levenshtein distance
 function lev(a, b) {
   const m = [];
@@ -330,7 +397,7 @@ function matchGridLines(gridLines, nameNorm) {
   return null;
 }
 
-async function locateRow(row, occtoFeatures, gridLines, aliases) {
+async function locateRow(row, occtoFeatures, gridLines, aliases, osmSubstations = []) {
   const original = row.name;
   let nameNorm = normalizeName(original);
   
@@ -392,9 +459,37 @@ async function locateRow(row, occtoFeatures, gridLines, aliases) {
       }
       await new Promise(r => setTimeout(r, delayMs));
     }
+    
+    // If Nominatim failed, try OSM direct match for substations
+    if (osmSubstations.length > 0) {
+      const osmMatch = matchOSMSubstation(nameNorm, osmSubstations);
+      if (osmMatch) {
+        const result = {
+          name_original: original,
+          name_normalized: nameNorm,
+          lat: osmMatch.lat,
+          lon: osmMatch.lon,
+          matched_source: 'osm',
+          confidence: osmMatch.confidence,
+          notes: `osm_id=${osmMatch.osm_id} display='${osmMatch.display_name}'`
+        };
+        
+        // Add to cache
+        coordinateCache[cacheKey] = {
+          lat: result.lat,
+          lon: result.lon,
+          source: 'osm',
+          confidence: result.confidence,
+          display_name: osmMatch.display_name,
+          last_verified: new Date().toISOString().split('T')[0]
+        };
+        
+        return result;
+      }
+    }
   }
 
-  // GSI stub (returns none)
+  // GSI stub (returns none) - deprecated in favor of OSM
   const gsi = await queryGSI(nameNorm);
   if (gsi.length) {
     const g = gsi[0];
@@ -489,6 +584,11 @@ async function main() {
   console.log('[geo-locator] Grid lines loaded:', gridLines.length);
   const aliases = loadAliases(aliasesPath);
   console.log('[geo-locator] Aliases loaded:', Object.keys(aliases.aliases || {}).length);
+  
+  // Load OSM substations
+  const osmSubstationsPath = argv.osmSubstations || path.resolve(__dirname, '../data/power/osm/substations_osm.geojson');
+  const osmSubstations = loadOSMSubstations(osmSubstationsPath);
+  console.log('[geo-locator] OSM substations loaded:', osmSubstations.length);
 
   const out = [];
   const validEntries = [];
@@ -499,7 +599,7 @@ async function main() {
     if (processed >= maxRows) break;
     let located;
     try {
-      located = await locateRow(row, occtoFeatures, gridLines, aliases);
+      located = await locateRow(row, occtoFeatures, gridLines, aliases, osmSubstations);
     } catch (e) {
       located = {
         name_original: row.name,
