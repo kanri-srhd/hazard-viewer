@@ -4,6 +4,8 @@
 // JSON / GeoJSON / PMTiles / API / MVT を統一的に扱う
 // ===============================================
 
+import { resolveDataPath } from './pathResolver.js';
+
 // PMTiles の読み込みサポート（将来用）
 let PMTilesLib = null;
 try {
@@ -31,14 +33,24 @@ export async function loadData(sourceSpec) {
         // -------------------------------
         case "json":
         case "geojson":
-            const res = await fetch(sourceSpec.url);
+            // 相対パス(../data/...)の場合は pathResolver で解決
+            // 絶対パスまたはhttpで始まる場合はそのまま使用
+            let fetchUrl = sourceSpec.url;
+            if (fetchUrl.startsWith('../data/')) {
+                fetchUrl = resolveDataPath(fetchUrl.replace('../data/', ''));
+            } else if (fetchUrl.startsWith('./data/') || (!fetchUrl.startsWith('/') && !fetchUrl.startsWith('http'))) {
+                // './data/xxx' または相対パス（http/httpsでない）はそのまま使用
+                // ※ powerline.js等が resolveDataPath() を既に適用済みの場合はここに来る
+            }
+            
+            const res = await fetch(fetchUrl);
             if (!res.ok) {
-                console.warn("[loadData] JSON取得失敗:", sourceSpec.url, res.status);
+                console.warn("[loadData] JSON取得失敗:", fetchUrl, res.status);
                 return null;
             }
             const contentType = res.headers.get("content-type") || "";
             if (contentType.includes("text/html")) {
-                console.warn("[loadData] HTMLが返ってきたためJSONとみなせません:", sourceSpec.url);
+                console.warn("[loadData] HTMLが返ってきたためJSONとみなせません:", fetchUrl);
                 return null;
             }
             return await res.json();
