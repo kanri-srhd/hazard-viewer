@@ -15,6 +15,7 @@
 
 import { detectPrefecture } from "./utils/prefDetect.js";
 import { initHazardLayers, updateHazardPref, toggleHazard } from "./layers/hazard.js";
+import { initPowerLayers } from "./layers/power.js?v=20251126-01";
 import { parseInput } from "./utils/geocode.js";
 import { createLayerToggleUI, adjustPanelSize } from "./layers/ui.js";
 
@@ -137,6 +138,11 @@ map.on("load", () => {
     // ハザードレイヤー初期化
     // --------------------------------------------------
     initHazardLayers(map, () => currentPrefCode);
+
+    // --------------------------------------------------
+    // 電力レイヤー初期化
+    // --------------------------------------------------
+    initPowerLayers(map);
 
     // --------------------------------------------------
     // Google Maps風コントロール追加

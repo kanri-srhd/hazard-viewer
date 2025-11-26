@@ -1,0 +1,26 @@
+{
+  "新宿変電所": {
+    "lat": 35.6947037,
+    "lon": 139.6865963,
+    "source": "nominatim",
+    "confidence": 0.75,
+    "display_name": "淀橋変電所, 新宿区, 東京都",
+    "last_verified": "2025-11-25"
+  },
+  "渋谷変電所": {
+    "lat": 35.4360352,
+    "lon": 139.5011171,
+    "source": "nominatim",
+    "confidence": 0.75,
+    "display_name": "変電所前, 瀬谷区, 横浜市, 神奈川県",
+    "last_verified": "2025-11-25"
+  },
+  "池袋変電所": {
+    "lat": 35.5699419,
+    "lon": 139.6963716,
+    "source": "nominatim",
+    "confidence": 0.75,
+    "display_name": "池上変電所, 大田区, 東京都",
+    "last_verified": "2025-11-25"
+  }
+}

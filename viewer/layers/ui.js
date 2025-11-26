@@ -14,7 +14,9 @@
 // ======================================================================
 
 import { hazardMatrix } from "../../data/hazardMatrix.js";
+import { powerMatrix } from "../../data/powerMatrix.js";
 import { toggleHazard } from "./hazard.js";
+import { togglePower } from "./power.js";
 
 let isPanelOpen = false;
 let isMobile = false;
@@ -81,7 +83,7 @@ export function createLayerToggleUI(map, callbacks = {}) {
     // カテゴリー順序: 地番 → ハザード → 電力 → 地図
     createJibanSection(panel, callbacks);
     createHazardSection(panel, map, callbacks);
-    createCapacitySection(panel, callbacks);
+    createPowerSection(panel, map);
     createMapSection(panel, map, callbacks);
 
     // リサイズ対応
@@ -301,23 +303,38 @@ function createHazardSection(panel, map, callbacks) {
 /**
  * 電力（空き容量）セクション（第3カテゴリー）
  */
-function createCapacitySection(panel, callbacks) {
-    const section = createSection("⚡ 電力", [
-        {
-            id: "capacity",
-            icon: "📊",
-            label: "空き容量",
-            toggle: callbacks.toggleCapacity
-        },
-        {
-            id: "grid",
-            icon: "⚡",
-            label: "送電網",
-            toggle: callbacks.toggleGrid
-        }
-    ], null, false);
+function chooseIconByPowerSubtype(subtype) {
+    switch (subtype) {
+        case "grid_lines":
+            return "⚡";
+        case "substations":
+            return "🏭";
+        case "capacity":
+            return "📊";
+        default:
+            return "🔌";
+    }
+}
 
-    panel.appendChild(section);
+/**
+ * 電力セクション（第3カテゴリー）- powerMatrix から自動生成
+ */
+function createPowerSection(panel, map) {
+    const items = [];
+    for (const [id, cfg] of Object.entries(powerMatrix)) {
+        const meta = cfg.metadata || {};
+        const icon = chooseIconByPowerSubtype(meta.subtype);
+        items.push({
+            id,
+            icon,
+            label: cfg.title,
+            layerId: `power_${id}`,
+            toggle: (checked) => togglePower(id, checked)
+        });
+    }
+    if (items.length > 0) {
+        panel.appendChild(createSection("⚡ 電力", items, map, false));
+    }
 }
 
 /**
