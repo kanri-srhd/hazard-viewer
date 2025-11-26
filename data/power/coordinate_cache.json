@@ -22,5 +22,13 @@
     "confidence": 0.75,
     "display_name": "池上変電所, 大田区, 東京都",
     "last_verified": "2025-11-25"
+  },
+  "港北線(港北~荏田)": {
+    "lat": 35.0241319,
+    "lon": 135.7523188,
+    "source": "nominatim",
+    "confidence": 0.75,
+    "display_name": "堀川変電所, 東堀川通, 武衛陣町, 主計町, 上京区, 京都市, 京都府, 602-8058, 日本",
+    "last_verified": "2025-11-26"
   }
 }

@@ -87,7 +87,7 @@ function parseArgs() {
 }
 
 const argv = parseArgs();
-const inputCsv = argv.input || path.resolve(__dirname, '../data/power/capacity/sample_capacity.csv');
+const inputCsv = argv.input || argv.csv || path.resolve(__dirname, '../data/power/capacity/sample_capacity.csv');
 const outJson = argv.out || path.resolve(__dirname, '../data/power/capacity/sample_capacity_located.json');
 const occtoPath = argv.occto || null;
 const gridLinesPath = argv.gridLines || path.resolve(__dirname, '../data/power/grid/grid_lines_osm.geojson');
@@ -132,6 +132,34 @@ function readCSV(fp) {
     header.forEach((h, i) => obj[h] = cols[i] ? cols[i].trim() : '');
     return obj;
   });
+}
+
+function readInput(fp) {
+  if (!fs.existsSync(fp)) throw new Error('Input file not found: ' + fp);
+  
+  // Try JSON first
+  if (fp.endsWith('.json')) {
+    try {
+      const text = fs.readFileSync(fp, 'utf8');
+      const data = JSON.parse(text);
+      // If it's already an array, use it directly
+      if (Array.isArray(data)) {
+        console.log(`[geo-locator] Loaded ${data.length} entries from JSON`);
+        return data;
+      }
+      // If it has an entries property, use that
+      if (data.entries && Array.isArray(data.entries)) {
+        console.log(`[geo-locator] Loaded ${data.entries.length} entries from JSON`);
+        return data.entries;
+      }
+      throw new Error('JSON must be an array or have an "entries" property');
+    } catch (error) {
+      throw new Error('Failed to parse JSON: ' + error.message);
+    }
+  }
+  
+  // Fallback to CSV parsing
+  return readCSV(fp);
 }
 
 function loadOCCTO(fp) {
@@ -445,7 +473,7 @@ async function locateRow(row, occtoFeatures, gridLines, aliases) {
 }
 
 async function main() {
-  console.log('[geo-locator] Input CSV:', inputCsv);
+  console.log('[geo-locator] Input file:', inputCsv);
   
   // Load schema for validation
   loadSchema();
@@ -453,7 +481,7 @@ async function main() {
   // Load coordinate cache
   coordinateCache = loadCache(cachePath);
   
-  const rows = readCSV(inputCsv);
+  const rows = readInput(inputCsv);
   console.log('[geo-locator] Rows:', rows.length);
   const occtoFeatures = loadOCCTO(occtoPath);
   console.log('[geo-locator] OCCTO features loaded:', occtoFeatures.length);
@@ -490,8 +518,8 @@ async function main() {
       name_original: located.name_original,
       name_normalized: located.name_normalized,
       utility: row.utility || null,
-      voltage_kv: row.voltage_kv ? parseFloat(row.voltage_kv) : null,
-      available_kw: row.available_kw ? parseFloat(row.available_kw) : null,
+      voltage_kv: row.voltage_kv != null ? parseFloat(row.voltage_kv) : null,
+      available_kw: row.available_kw != null ? parseFloat(row.available_kw) : null,
       updated_at: row.updated_at || null,
       lat: located.lat,
       lon: located.lon,
