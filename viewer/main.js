@@ -17,6 +17,7 @@ import { detectPrefecture } from "./utils/prefDetect.js";
 import { initHazardLayers, updateHazardPref, toggleHazard } from "./layers/hazard.js";
 import { initPowerLayers } from "./layers/power.js?v=20251126-01";
 import { addPowerlineLayer, togglePowerlineLayer } from "./layers/powerline.js";
+import { PowerInfraLayer } from "./layers/power_infrastructure.js";
 import { parseInput } from "./utils/geocode.js";
 import { createLayerToggleUI, adjustPanelSize } from "./layers/ui.js";
 
@@ -153,13 +154,11 @@ map.on("load", () => {
     // --------------------------------------------------
     // 電力インフラレイヤー初期化（変電所・送電線）
     // --------------------------------------------------
-    if (window.PowerInfraLayer) {
-        window.PowerInfraLayer.add(map).then(() => {
-            console.log('[main] Power infrastructure layer initialized');
-        }).catch(err => {
-            console.error('[main] Failed to initialize power infrastructure layer:', err);
-        });
-    }
+    PowerInfraLayer.add(map).then(() => {
+        console.log('[main] Power infrastructure layer initialized');
+    }).catch(err => {
+        console.error('[main] Failed to initialize power infrastructure layer:', err);
+    });
 
     // --------------------------------------------------
     // Google Maps風コントロール追加

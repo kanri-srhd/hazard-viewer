@@ -1,7 +1,6 @@
 // viewer/layers/power.js - initial scaffold for power layers
 
 import { powerMatrix } from "../../data/powerMatrix.js?v=20251126-01";
-import { resolveDataPath } from '../utils/pathResolver.js';
 
 function addGeoJSONSource(map, sourceId, url) {
     if (map.getSource(sourceId)) return;
@@ -103,13 +102,8 @@ export function initPowerLayers(map) {
         const sourceId = `power_src_${id}`;
         const layerId = `power_${id}`;
 
-        // Convert paths: absolute paths (/data/...) or relative paths (../data/...)
-        let resolvedSource = cfg.source;
-        if (cfg.source.startsWith('/data/')) {
-            resolvedSource = resolveDataPath(cfg.source.replace('/data/', ''));
-        } else if (cfg.source.startsWith('../data/')) {
-            resolvedSource = resolveDataPath(cfg.source.replace('../data/', ''));
-        }
+        // Use source path as-is (already relative from viewer/)
+        const resolvedSource = cfg.source;
 
         // add source based on sourceType
         if (cfg.sourceType === "geojson") {

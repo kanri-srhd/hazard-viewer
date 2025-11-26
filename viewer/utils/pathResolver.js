@@ -5,14 +5,12 @@
 
 /**
  * Get the base path for data files
- * @returns {string} Base path (e.g., "../data" for localhost, "./data" for GitHub Pages)
+ * @returns {string} Base path ('../data' for both localhost and GitHub Pages)
  */
 export function getDataBasePath() {
-  // Check if running on GitHub Pages
-  if (window.location.hostname === 'kanri-srhd.github.io') {
-    return './data';
-  }
-  // Local development
+  // Both localhost (http://localhost:8000/viewer/) and GitHub Pages
+  // (https://kanri-srhd.github.io/hazard-viewer/viewer/) serve from viewer/ directory
+  // Data is always at ../data/ relative to viewer/
   return '../data';
 }
 
