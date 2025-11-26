@@ -7,8 +7,10 @@
     "doc": "docs"
   },
   "dependencies": {
+    "adm-zip": "^0.5.16",
     "ajv": "^8.17.1",
     "csv-parse": "^6.1.0",
+    "iconv-lite": "^0.7.0",
     "sax": "^1.4.3",
     "xml2js": "^0.6.2",
     "xmlbuilder": "^11.0.1"
