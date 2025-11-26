@@ -3,6 +3,8 @@
 //  電力インフラレイヤー（変電所・送電線）
 // ============================================
 
+import { resolveDataPath } from '../utils/pathResolver.js';
+
 let mapInstance = null;
 let isVisible = false;
 let layerAdded = false;
@@ -17,7 +19,7 @@ const LINE_LAYER_ID = "power-line-layer";
 // データロード
 // --------------------------------------------
 async function loadInfrastructureData() {
-    const dataUrl = "../data/power/capacity/tepco_all_regions_entries_only.json";
+    const dataUrl = resolveDataPath("power/capacity/tepco_all_regions_entries_only.json");
     
     try {
         const data = await fetch(dataUrl).then(r => r.json());

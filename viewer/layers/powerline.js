@@ -6,6 +6,7 @@
  */
 
 import { loadData } from '../utils/dataLoader.js';
+import { resolveDataPath } from '../utils/pathResolver.js';
 
 /**
  * Load OSM power lines and add to map
@@ -14,7 +15,7 @@ export async function addPowerlineLayer(map) {
   console.log('[powerline] Loading OSM power lines...');
   
   try {
-    const geojson = await loadData({ type: 'geojson', url: '../data/power/osm/powerlines_osm.geojson' });
+    const geojson = await loadData({ type: 'geojson', url: resolveDataPath('power/osm/powerlines_osm.geojson') });
     
     if (!geojson || !geojson.features) {
       console.warn('[powerline] No powerline data found');
