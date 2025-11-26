@@ -16,6 +16,7 @@
 import { detectPrefecture } from "./utils/prefDetect.js";
 import { initHazardLayers, updateHazardPref, toggleHazard } from "./layers/hazard.js";
 import { initPowerLayers } from "./layers/power.js?v=20251126-01";
+import { addPowerlineLayer, togglePowerlineLayer } from "./layers/powerline.js";
 import { parseInput } from "./utils/geocode.js";
 import { createLayerToggleUI, adjustPanelSize } from "./layers/ui.js";
 
@@ -143,6 +144,11 @@ map.on("load", () => {
     // 電力レイヤー初期化
     // --------------------------------------------------
     initPowerLayers(map);
+    
+    // --------------------------------------------------
+    // 送電線レイヤー初期化（OSM power=line）
+    // --------------------------------------------------
+    addPowerlineLayer(map);
     
     // --------------------------------------------------
     // 電力インフラレイヤー初期化（変電所・送電線）

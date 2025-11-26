@@ -17,6 +17,7 @@ import { hazardMatrix } from "../../data/hazardMatrix.js";
 import { powerMatrix } from "../../data/powerMatrix.js";
 import { toggleHazard } from "./hazard.js";
 import { togglePower } from "./power.js";
+import { togglePowerlineLayer } from "./powerline.js";
 
 let isPanelOpen = false;
 let isMobile = false;
@@ -339,6 +340,19 @@ function createPowerSection(panel, map) {
                         console.log(`[power-infra] Total: ${stats.total}, With coords: ${stats.withCoords} (${stats.coordsPercentage}%)`);
                     }
                 }
+            }
+        }
+    });
+    
+    // OSM送電線レイヤー（154kV+）
+    items.push({
+        id: "powerlines_osm",
+        icon: "⚡",
+        label: "送電線（154kV+）",
+        layerId: "powerlines-osm-lines",
+        toggle: (checked) => {
+            if (typeof togglePowerlineLayer !== 'undefined') {
+                togglePowerlineLayer(map, checked);
             }
         }
     });
