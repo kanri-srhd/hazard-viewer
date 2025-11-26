@@ -1,0 +1,490 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>電力インフラ座標エディタ</title>
+  <link href="https://unpkg.com/maplibre-gl@3.6.1/dist/maplibre-gl.css" rel="stylesheet" />
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      display: flex;
+      height: 100vh;
+      overflow: hidden;
+    }
+    
+    /* サイドパネル */
+    #side-panel {
+      width: 400px;
+      background: #fff;
+      border-right: 1px solid #ddd;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    
+    #side-panel header {
+      background: #2c3e50;
+      color: #fff;
+      padding: 16px;
+      font-size: 18px;
+      font-weight: bold;
+    }
+    
+    /* フィルター */
+    #filters {
+      padding: 12px;
+      border-bottom: 1px solid #ddd;
+      background: #f8f9fa;
+    }
+    
+    #filters input,
+    #filters select {
+      width: 100%;
+      padding: 8px;
+      margin-bottom: 8px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      font-size: 14px;
+    }
+    
+    /* 施設リスト */
+    #facility-list {
+      flex: 1;
+      overflow-y: auto;
+      padding: 8px;
+    }
+    
+    .facility-item {
+      padding: 12px;
+      margin-bottom: 8px;
+      background: #fff;
+      border: 1px solid #ddd;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    
+    .facility-item:hover {
+      background: #f0f7ff;
+      border-color: #4a90e2;
+    }
+    
+    .facility-item.selected {
+      background: #e3f2fd;
+      border-color: #2196f3;
+      border-width: 2px;
+    }
+    
+    .facility-item.has-coords {
+      opacity: 0.5;
+      cursor: default;
+    }
+    
+    .facility-item.has-coords:hover {
+      background: #fff;
+      border-color: #ddd;
+    }
+    
+    .facility-name {
+      font-weight: bold;
+      color: #333;
+      margin-bottom: 4px;
+    }
+    
+    .facility-meta {
+      font-size: 13px;
+      color: #666;
+    }
+    
+    .voltage-badge {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 12px;
+      font-size: 11px;
+      font-weight: bold;
+      color: #fff;
+      margin-right: 6px;
+    }
+    
+    .voltage-500kv { background: #4b0082; }
+    .voltage-275kv { background: #8b0000; }
+    .voltage-154kv { background: #dc143c; }
+    .voltage-66kv { background: #ff4500; }
+    .voltage-22kv { background: #ff8c00; }
+    .voltage-6kv { background: #ffd700; color: #333; }
+    
+    /* 地図 */
+    #map {
+      flex: 1;
+      position: relative;
+    }
+    
+    /* 編集モード通知 */
+    #edit-mode-banner {
+      position: absolute;
+      top: 10px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: #2196f3;
+      color: #fff;
+      padding: 12px 24px;
+      border-radius: 6px;
+      font-size: 14px;
+      font-weight: bold;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+      display: none;
+      z-index: 1000;
+    }
+    
+    #edit-mode-banner.active {
+      display: block;
+    }
+    
+    /* コントロールボタン */
+    #map-controls {
+      position: absolute;
+      bottom: 20px;
+      right: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      z-index: 999;
+    }
+    
+    .control-btn {
+      padding: 12px 20px;
+      background: #fff;
+      border: none;
+      border-radius: 6px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: bold;
+      transition: all 0.2s;
+    }
+    
+    .control-btn:hover {
+      background: #f0f0f0;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    }
+    
+    .control-btn.primary {
+      background: #4caf50;
+      color: #fff;
+    }
+    
+    .control-btn.primary:hover {
+      background: #45a049;
+    }
+    
+    .control-btn.danger {
+      background: #f44336;
+      color: #fff;
+    }
+    
+    .control-btn.danger:hover {
+      background: #da190b;
+    }
+    
+    .control-btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+    
+    /* 統計情報 */
+    #stats {
+      padding: 12px;
+      background: #e8f5e9;
+      border-top: 1px solid #c8e6c9;
+      font-size: 13px;
+      color: #2e7d32;
+    }
+  </style>
+</head>
+<body>
+  <!-- サイドパネル -->
+  <div id="side-panel">
+    <header>⚡ 座標未登録施設</header>
+    
+    <!-- フィルター -->
+    <div id="filters">
+      <input id="filter-name" type="text" placeholder="施設名で検索..." />
+      <select id="filter-voltage">
+        <option value="">全電圧階級</option>
+        <option value="500">500kV</option>
+        <option value="275">275kV</option>
+        <option value="154">154kV</option>
+        <option value="66">66kV</option>
+        <option value="22">22kV</option>
+        <option value="6.6">6.6kV</option>
+      </select>
+      <select id="filter-region">
+        <option value="">全地域</option>
+        <option value="kikan">基幹系統</option>
+        <option value="tokyo23">東京23区</option>
+        <option value="kanagawa">神奈川</option>
+        <option value="saitama">埼玉</option>
+        <option value="chiba">千葉</option>
+      </select>
+    </div>
+    
+    <!-- 施設リスト -->
+    <div id="facility-list"></div>
+    
+    <!-- 統計 -->
+    <div id="stats">
+      未登録: <strong id="stat-unlocated">0</strong> / 全体: <strong id="stat-total">0</strong>
+    </div>
+  </div>
+  
+  <!-- 地図 -->
+  <div id="map">
+    <div id="edit-mode-banner">
+      🎯 地図をクリックして座標を設定してください
+    </div>
+    
+    <div id="map-controls">
+      <button id="btn-confirm" class="control-btn primary" disabled>✓ 座標を確定</button>
+      <button id="btn-cancel" class="control-btn danger" disabled>✕ キャンセル</button>
+      <button id="btn-export" class="control-btn">💾 エクスポート</button>
+    </div>
+  </div>
+  
+  <script src="https://unpkg.com/maplibre-gl@3.6.1/dist/maplibre-gl.js"></script>
+  <script type="module">
+    // ============================================
+    // データ読み込み
+    // ============================================
+    let allFacilities = [];
+    let filteredFacilities = [];
+    let selectedFacility = null;
+    let tempMarker = null;
+    let coordinateCache = {};
+    
+    async function loadData() {
+      const [facilities, cache] = await Promise.all([
+        fetch('../data/power/capacity/tepco_all_regions_entries_only.json').then(r => r.json()),
+        fetch('../data/power/coordinate_cache.json').then(r => r.json()).catch(() => ({}))
+      ]);
+      
+      allFacilities = facilities.filter(f => 
+        !f.name.endsWith('線') && 
+        !f.name.includes('幹線') &&
+        (f.lat == null || f.lon == null)
+      );
+      
+      coordinateCache = cache;
+      
+      updateStats();
+      filterFacilities();
+    }
+    
+    // ============================================
+    // 地図初期化
+    // ============================================
+    const map = new maplibregl.Map({
+      container: 'map',
+      style: {
+        version: 8,
+        sources: {
+          osm: {
+            type: 'raster',
+            tiles: ['https://tile.openstreetmap.org/{z}/{x}/{y}.png'],
+            tileSize: 256,
+            attribution: '© OpenStreetMap contributors'
+          }
+        },
+        layers: [{ id: 'osm', type: 'raster', source: 'osm' }]
+      },
+      center: [139.6917, 35.6895],
+      zoom: 10
+    });
+    
+    window.map = map;
+    
+    // ============================================
+    // 施設リスト表示
+    // ============================================
+    function renderFacilityList() {
+      const container = document.getElementById('facility-list');
+      container.innerHTML = '';
+      
+      filteredFacilities.slice(0, 100).forEach(f => {
+        const item = document.createElement('div');
+        item.className = 'facility-item';
+        if (selectedFacility?.id === f.id) item.classList.add('selected');
+        
+        const voltageClass = f.voltage_kv >= 500 ? '500kv' :
+                            f.voltage_kv >= 275 ? '275kv' :
+                            f.voltage_kv >= 154 ? '154kv' :
+                            f.voltage_kv >= 66 ? '66kv' :
+                            f.voltage_kv >= 22 ? '22kv' : '6kv';
+        
+        item.innerHTML = `
+          <div class="facility-name">${f.name}</div>
+          <div class="facility-meta">
+            <span class="voltage-badge voltage-${voltageClass}">${f.voltage_kv}kV</span>
+            容量: ${(f.available_kw / 1000).toFixed(0)} kW
+          </div>
+        `;
+        
+        item.addEventListener('click', () => selectFacility(f));
+        container.appendChild(item);
+      });
+      
+      if (filteredFacilities.length > 100) {
+        const more = document.createElement('div');
+        more.style.padding = '12px';
+        more.style.textAlign = 'center';
+        more.style.color = '#666';
+        more.textContent = `... 他 ${filteredFacilities.length - 100} 件`;
+        container.appendChild(more);
+      }
+    }
+    
+    // ============================================
+    // 施設選択
+    // ============================================
+    function selectFacility(facility) {
+      selectedFacility = facility;
+      renderFacilityList();
+      
+      document.getElementById('edit-mode-banner').classList.add('active');
+      document.getElementById('btn-cancel').disabled = false;
+      
+      console.log('Selected facility:', facility.name);
+    }
+    
+    // ============================================
+    // 地図クリック
+    // ============================================
+    map.on('click', (e) => {
+      if (!selectedFacility) return;
+      
+      const { lng, lat } = e.lngLat;
+      
+      if (tempMarker) tempMarker.remove();
+      
+      tempMarker = new maplibregl.Marker({ color: '#2196f3', draggable: true })
+        .setLngLat([lng, lat])
+        .setPopup(new maplibregl.Popup({ offset: 25 }).setHTML(`
+          <strong>${selectedFacility.name}</strong><br>
+          ${selectedFacility.voltage_kv}kV<br>
+          座標: ${lat.toFixed(6)}, ${lng.toFixed(6)}
+        `))
+        .addTo(map);
+      
+      document.getElementById('btn-confirm').disabled = false;
+      
+      console.log('Temp marker set:', lat, lng);
+    });
+    
+    // ============================================
+    // 座標確定
+    // ============================================
+    document.getElementById('btn-confirm').addEventListener('click', () => {
+      if (!selectedFacility || !tempMarker) return;
+      
+      const lngLat = tempMarker.getLngLat();
+      const normalized = selectedFacility.name + '変電所';
+      
+      coordinateCache[normalized] = {
+        lat: lngLat.lat,
+        lon: lngLat.lng,
+        source: 'manual',
+        confidence: 1.0,
+        display_name: selectedFacility.name,
+        last_verified: new Date().toISOString().split('T')[0]
+      };
+      
+      alert(`✓ ${selectedFacility.name} の座標を登録しました\n\n座標: ${lngLat.lat.toFixed(6)}, ${lngLat.lng.toFixed(6)}\n\n※ ブラウザを閉じる前に「エクスポート」ボタンでJSONファイルを保存してください。`);
+      
+      resetEditMode();
+      updateStats();
+    });
+    
+    // ============================================
+    // キャンセル
+    // ============================================
+    document.getElementById('btn-cancel').addEventListener('click', () => {
+      resetEditMode();
+    });
+    
+    function resetEditMode() {
+      selectedFacility = null;
+      if (tempMarker) {
+        tempMarker.remove();
+        tempMarker = null;
+      }
+      document.getElementById('edit-mode-banner').classList.remove('active');
+      document.getElementById('btn-confirm').disabled = true;
+      document.getElementById('btn-cancel').disabled = true;
+      renderFacilityList();
+    }
+    
+    // ============================================
+    // エクスポート
+    // ============================================
+    document.getElementById('btn-export').addEventListener('click', () => {
+      const json = JSON.stringify(coordinateCache, null, 2);
+      const blob = new Blob([json], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `coordinate_cache_${new Date().toISOString().split('T')[0]}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+      
+      alert(`✓ ${Object.keys(coordinateCache).length} 件の座標データをエクスポートしました\n\nファイル名: ${a.download}\n\n※ このファイルを data/power/coordinate_cache.json に上書きしてください。`);
+    });
+    
+    // ============================================
+    // フィルター
+    // ============================================
+    function filterFacilities() {
+      const nameFilter = document.getElementById('filter-name').value.toLowerCase();
+      const voltageFilter = document.getElementById('filter-voltage').value;
+      const regionFilter = document.getElementById('filter-region').value;
+      
+      filteredFacilities = allFacilities.filter(f => {
+        if (nameFilter && !f.name.toLowerCase().includes(nameFilter)) return false;
+        if (voltageFilter && f.voltage_kv != parseFloat(voltageFilter)) return false;
+        // Region filter would require additional metadata
+        return true;
+      });
+      
+      // Sort by voltage (high to low) and capacity
+      filteredFacilities.sort((a, b) => {
+        if (b.voltage_kv !== a.voltage_kv) return b.voltage_kv - a.voltage_kv;
+        return b.available_kw - a.available_kw;
+      });
+      
+      renderFacilityList();
+    }
+    
+    document.getElementById('filter-name').addEventListener('input', filterFacilities);
+    document.getElementById('filter-voltage').addEventListener('change', filterFacilities);
+    document.getElementById('filter-region').addEventListener('change', filterFacilities);
+    
+    // ============================================
+    // 統計更新
+    // ============================================
+    function updateStats() {
+      document.getElementById('stat-unlocated').textContent = allFacilities.length;
+      document.getElementById('stat-total').textContent = '3170'; // または動的に取得
+    }
+    
+    // ============================================
+    // 初期化
+    // ============================================
+    loadData();
+  </script>
+</body>
+</html>
