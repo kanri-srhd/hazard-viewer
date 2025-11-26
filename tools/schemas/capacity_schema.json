@@ -60,7 +60,7 @@
     "matched_source": {
       "type": "string",
       "description": "Source of geocoding match",
-      "enum": ["nominatim", "gsi", "occto", "grid_lines", "osm_grid_lines", "occto_fuzzy", "cache", "manual", "unmatched", "error"]
+      "enum": ["nominatim", "gsi", "occto", "grid_lines", "osm_grid_lines", "occto_fuzzy", "cache", "manual", "osm", "unmatched", "error"]
     },
     "confidence": {
       "type": "number",
