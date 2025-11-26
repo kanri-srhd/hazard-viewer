@@ -3,26 +3,41 @@
  * geo_locator.js
  *
  * Enriches capacity CSV rows (no coordinates) with lat/lon by cascading lookup:
+ * 0. Coordinate cache check (persistent across runs)
  * 1. Name normalization
- * 2. Nominatim (OSM) search
+ * 2. Nominatim (OSM) search with Japan filter
  * 3. (Stub) GSI place search (future)
- * 4. OCCTO GeoJSON fuzzy match (optional)
+ * 4. Grid lines fuzzy match (for transmission lines)
+ * 5. OCCTO GeoJSON fuzzy match (optional)
  *
  * Output: JSON array with fields:
- *   id, name_original, name_normalized, utility, voltage_kv, available_kw,
+ *   id, name, name_original, name_normalized, utility, voltage_kv, available_kw,
  *   matched_source, lat, lon, confidence, notes, updated_at
  *
  * Usage:
- *   node tools/geo_locator.js --input data/power/capacity/sample_capacity.csv \
+ *   node tools/geo_locator.js \
+ *        --input data/power/capacity/sample_capacity.csv \
  *        --out data/power/capacity/sample_capacity_located.json \
- *        --occto data/power/substations/occto.geojson --max 200
+ *        --cache data/power/coordinate_cache.json \
+ *        --occto data/power/substations/occto.geojson \
+ *        --gridLines data/power/grid/grid_lines_osm.geojson \
+ *        --aliases data/power/name_aliases.json \
+ *        --max 200 \
+ *        --delay 1100
  *
  * CSV expected columns (header row required):
  *   id,name,utility,voltage_kv,available_kw,updated_at
  *
+ * Features:
+ * - Coordinate caching: Saves geocoding results to avoid repeated API calls
+ * - JSON Schema validation: Validates output against capacity_schema.json
+ * - Transmission line detection: Skips Nominatim for lines ending with 線
+ * - Alias support: Applies name transformations before geocoding
+ *
  * Notes:
  * - Provide a valid email in USER_AGENT_EMAIL env for Nominatim etiquette.
- * - Rate limited: introduces delay between requests.
+ * - Rate limited: introduces delay between requests (default 1100ms).
+ * - Cache improves performance and reduces API load on subsequent runs.
  */
 
 import fs from 'fs';
@@ -77,9 +92,13 @@ const outJson = argv.out || path.resolve(__dirname, '../data/power/capacity/samp
 const occtoPath = argv.occto || null;
 const gridLinesPath = argv.gridLines || path.resolve(__dirname, '../data/power/grid/grid_lines_osm.geojson');
 const aliasesPath = argv.aliases || path.resolve(__dirname, '../data/power/name_aliases.json');
+const cachePath = argv.cache || path.resolve(__dirname, '../data/power/coordinate_cache.json');
 const maxRows = argv.max ? parseInt(argv.max, 10) : Infinity;
 const delayMs = argv.delay ? parseInt(argv.delay, 10) : 1100; // polite ~1 req/sec
 const USER_AGENT_EMAIL = process.env.USER_AGENT_EMAIL || 'example@example.com';
+
+// Coordinate cache: {facility_name: {lat, lon, source, confidence, display_name, last_verified}}
+let coordinateCache = {};
 
 // Simple full-width to half-width conversion
 function toHalfWidth(str) {
@@ -136,6 +155,32 @@ function loadGridLines(fp) {
   } catch (e) {
     console.warn('Failed to parse grid lines GeoJSON:', e.message);
     return [];
+  }
+}
+
+function loadCache(fp) {
+  if (!fp) return {};
+  if (!fs.existsSync(fp)) {
+    console.log('[geo-locator] Cache file not found, starting with empty cache');
+    return {};
+  }
+  try {
+    const cache = JSON.parse(fs.readFileSync(fp, 'utf8'));
+    console.log(`[geo-locator] Loaded ${Object.keys(cache).length} cached coordinates`);
+    return cache;
+  } catch (e) {
+    console.warn('Failed to parse coordinate cache:', e.message);
+    return {};
+  }
+}
+
+function saveCache(fp, cache) {
+  if (!fp) return;
+  try {
+    fs.writeFileSync(fp, JSON.stringify(cache, null, 2), 'utf8');
+    console.log(`[geo-locator] Saved ${Object.keys(cache).length} coordinates to cache`);
+  } catch (e) {
+    console.error('Failed to save coordinate cache:', e.message);
   }
 }
 
@@ -267,6 +312,21 @@ async function locateRow(row, occtoFeatures, gridLines, aliases) {
     nameNorm = aliased;
   }
 
+  // Check cache first (before alias application, using original normalized name)
+  const cacheKey = normalizeName(original);
+  if (coordinateCache[cacheKey]) {
+    const cached = coordinateCache[cacheKey];
+    return {
+      name_original: original,
+      name_normalized: nameNorm,
+      lat: cached.lat,
+      lon: cached.lon,
+      matched_source: 'cache',
+      confidence: cached.confidence || 0.8,
+      notes: `cached source=${cached.source} verified=${cached.last_verified || 'unknown'} display='${cached.display_name || ''}'`
+    };
+  }
+
   // Detect transmission line (ends with 線) -> skip Nominatim, go straight to grid_lines
   const isTransmissionLine = /線$/.test(nameNorm);
 
@@ -280,7 +340,7 @@ async function locateRow(row, occtoFeatures, gridLines, aliases) {
       const res = await queryNominatim(q);
       if (res && res.length) {
         const top = res[0];
-        return {
+        const result = {
           name_original: original,
           name_normalized: nameNorm,
           lat: parseFloat(top.lat),
@@ -289,6 +349,18 @@ async function locateRow(row, occtoFeatures, gridLines, aliases) {
           confidence: 0.75,
           notes: `query='${q}' display='${top.display_name}'`
         };
+        
+        // Add to cache using original normalized name (before alias)
+        coordinateCache[cacheKey] = {
+          lat: result.lat,
+          lon: result.lon,
+          source: 'nominatim',
+          confidence: result.confidence,
+          display_name: top.display_name,
+          last_verified: new Date().toISOString().split('T')[0]
+        };
+        
+        return result;
       }
       await new Promise(r => setTimeout(r, delayMs));
     }
@@ -312,7 +384,7 @@ async function locateRow(row, occtoFeatures, gridLines, aliases) {
   // Grid lines (for transmission lines)
   const gridMatch = matchGridLines(gridLines, nameNorm);
   if (gridMatch) {
-    return {
+    const result = {
       name_original: original,
       name_normalized: nameNorm,
       lat: gridMatch.lat,
@@ -321,12 +393,24 @@ async function locateRow(row, occtoFeatures, gridLines, aliases) {
       confidence: gridMatch.confidence,
       notes: gridMatch.notes
     };
+    
+    // Add to cache using original normalized name
+    coordinateCache[cacheKey] = {
+      lat: result.lat,
+      lon: result.lon,
+      source: gridMatch.matched_source,
+      confidence: result.confidence,
+      display_name: gridMatch.notes,
+      last_verified: new Date().toISOString().split('T')[0]
+    };
+    
+    return result;
   }
 
   // OCCTO fuzzy
   const occto = matchOCCTO(occtoFeatures, nameNorm);
   if (occto) {
-    return {
+    const result = {
       name_original: original,
       name_normalized: nameNorm,
       lat: occto.lat,
@@ -335,6 +419,18 @@ async function locateRow(row, occtoFeatures, gridLines, aliases) {
       confidence: occto.confidence,
       notes: occto.notes
     };
+    
+    // Add to cache using original normalized name
+    coordinateCache[cacheKey] = {
+      lat: result.lat,
+      lon: result.lon,
+      source: occto.matched_source,
+      confidence: result.confidence,
+      display_name: occto.notes,
+      last_verified: new Date().toISOString().split('T')[0]
+    };
+    
+    return result;
   }
 
   return {
@@ -353,6 +449,9 @@ async function main() {
   
   // Load schema for validation
   loadSchema();
+  
+  // Load coordinate cache
+  coordinateCache = loadCache(cachePath);
   
   const rows = readCSV(inputCsv);
   console.log('[geo-locator] Rows:', rows.length);
@@ -422,6 +521,9 @@ async function main() {
   fs.writeFileSync(outJson, JSON.stringify(out, null, 2));
   console.log(`\n[geo-locator] Written: ${outJson}`);
   
+  // Save updated cache
+  saveCache(cachePath, coordinateCache);
+  
   // Validation summary
   if (validate) {
     console.log(`[geo-locator] Validation: ${validEntries.length} valid, ${invalidEntries.length} invalid`);
@@ -435,7 +537,8 @@ async function main() {
   // Unmatched summary
   const unmatched = out.filter(r => r.matched_source === 'unmatched').length;
   const matched = out.filter(r => r.matched_source !== 'unmatched' && r.matched_source !== 'error').length;
-  console.log(`[geo-locator] Matched: ${matched}, Unmatched: ${unmatched}`);
+  const cached = out.filter(r => r.matched_source === 'cache').length;
+  console.log(`[geo-locator] Matched: ${matched}, Cached: ${cached}, Unmatched: ${unmatched}`);
 }
 
 // Ensure main runs on Windows where import.meta.url uses file:///C:/... format
