@@ -14,6 +14,9 @@ const SOURCE_ID = "power-infra-src";
 const SUBSTATION_LAYER_ID = "power-substation-layer";
 const SUBSTATION_LABEL_ID = "power-substation-label";
 const LINE_LAYER_ID = "power-line-layer";
+const SUBSTATION_POLYGONS_SOURCE_ID = "power-substation-polygons";
+const SUBSTATION_POLYGONS_FILL_ID = "power-substation-polygons-fill";
+const SUBSTATION_POLYGONS_OUTLINE_ID = "power-substation-polygons-outline";
 
 // --------------------------------------------
 // データロード
@@ -207,6 +210,38 @@ async function addPowerInfraLayer(map) {
         });
     }
 
+    // 変電所敷地ポリゴン（OSM）
+    try {
+        map.addSource(SUBSTATION_POLYGONS_SOURCE_ID, {
+            type: 'geojson',
+            data: resolveDataPath('power/osm/substation_polygons.geojson')
+        });
+
+        map.addLayer({
+            id: SUBSTATION_POLYGONS_FILL_ID,
+            type: 'fill',
+            source: SUBSTATION_POLYGONS_SOURCE_ID,
+            paint: {
+                'fill-color': '#d5a6f5',
+                'fill-opacity': 0.35
+            },
+            layout: { visibility: 'visible' }
+        });
+
+        map.addLayer({
+            id: SUBSTATION_POLYGONS_OUTLINE_ID,
+            type: 'line',
+            source: SUBSTATION_POLYGONS_SOURCE_ID,
+            paint: {
+                'line-color': '#8a2be2',
+                'line-width': 1.5
+            },
+            layout: { visibility: 'visible' }
+        });
+    } catch (err) {
+        console.warn('[power-infra] Failed to add substation polygons:', err);
+    }
+
     layerAdded = true;
     console.log('[power-infra] Layer added');
 }
@@ -225,6 +260,12 @@ function togglePowerInfra() {
     }
     if (mapInstance.getLayer(SUBSTATION_LABEL_ID)) {
         mapInstance.setLayoutProperty(SUBSTATION_LABEL_ID, "visibility", visibility);
+    }
+    if (mapInstance.getLayer(SUBSTATION_POLYGONS_FILL_ID)) {
+        mapInstance.setLayoutProperty(SUBSTATION_POLYGONS_FILL_ID, 'visibility', visibility);
+    }
+    if (mapInstance.getLayer(SUBSTATION_POLYGONS_OUTLINE_ID)) {
+        mapInstance.setLayoutProperty(SUBSTATION_POLYGONS_OUTLINE_ID, 'visibility', visibility);
     }
 
     console.log(`[power-infra] Visibility: ${visibility}`);
