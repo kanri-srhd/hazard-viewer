@@ -20,8 +20,12 @@ const OVERPASS_URL = 'https://overpass-api.de/api/interpreter';
 const overpassQuery = `
 [out:json][timeout:180];
 (
-  way["power"="substation"]["area"="yes"](24.0,122.9,46.1,153.0);
-  relation["power"="substation"]["area"="yes"](24.0,122.9,46.1,153.0);
+  // power=substation polygons (ways + relations) nationwide bbox
+  way["power"="substation"](24.0,122.9,46.1,153.0);
+  relation["power"="substation"](24.0,122.9,46.1,153.0);
+  // Some mappers use landuse=substation
+  way["landuse"="substation"](24.0,122.9,46.1,153.0);
+  relation["landuse"="substation"](24.0,122.9,46.1,153.0);
 );
 out body;
 >;
