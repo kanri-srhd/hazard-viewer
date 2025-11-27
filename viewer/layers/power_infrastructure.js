@@ -271,6 +271,7 @@ async function addPowerInfraLayer(map) {
                     'text-field': [
                         'coalesce',
                         ['get', 'name'],
+                        ['get', 'name:ja'],
                         ['get', 'operator'],
                         ''
                     ],
