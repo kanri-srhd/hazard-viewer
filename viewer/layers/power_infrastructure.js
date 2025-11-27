@@ -111,25 +111,35 @@ async function addPowerInfraLayer(map) {
             source: SOURCE_ID,
             paint: {
                 "circle-radius": [
-                    "interpolate",
-                    ["linear"],
-                    ["get", "voltage_kv"],
-                    6.6, 4,    // 低圧配電
-                    22, 6,     // 配電
-                    66, 8,     // 2次系統
-                    154, 10,   // 1次系統
-                    275, 12,   // 基幹系統
-                    500, 14    // 超高圧
+                    "case",
+                    ["==", ["typeof", ["get", "voltage_kv"]], "number"],
+                    [
+                        "interpolate",
+                        ["linear"],
+                        ["get", "voltage_kv"],
+                        6.6, 4,    // 低圧配電
+                        22, 6,     // 配電
+                        66, 8,     // 2次系統
+                        154, 10,   // 1次系統
+                        275, 12,   // 基幹系統
+                        500, 14    // 超高圧
+                    ],
+                    7  // voltage_kv が無い場合のデフォルト半径
                 ],
                 "circle-color": [
-                    "step",
-                    ["get", "voltage_kv"],
-                    "#ffd700", // 6.6kV - gold
-                    22, "#ff8c00",  // 22kV - dark orange
-                    66, "#ff4500",  // 66kV - orange red
-                    154, "#dc143c", // 154kV - crimson
-                    275, "#8b0000", // 275kV - dark red
-                    500, "#4b0082"  // 500kV - indigo
+                    "case",
+                    ["==", ["typeof", ["get", "voltage_kv"]], "number"],
+                    [
+                        "step",
+                        ["get", "voltage_kv"],
+                        "#ffd700", // 6.6kV - gold
+                        22, "#ff8c00",  // 22kV - dark orange
+                        66, "#ff4500",  // 66kV - orange red
+                        154, "#dc143c", // 154kV - crimson
+                        275, "#8b0000", // 275kV - dark red
+                        500, "#4b0082"  // 500kV - indigo
+                    ],
+                    "#999999" // voltage_kv が無い場合のデフォルト色（グレー）
                 ],
                 "circle-opacity": 0.8,
                 "circle-stroke-color": "#ffffff",
