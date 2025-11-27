@@ -19,28 +19,20 @@ const LINE_LAYER_ID = "power-line-layer";
 // データロード
 // --------------------------------------------
 async function loadInfrastructureData() {
-    const dataUrl = resolveDataPath("power/capacity/tepco_all_regions_entries_only.json");
+    const dataUrl = resolveDataPath("power/capacity/tepco_substations_all_matched.json");
     
     try {
         const data = await fetch(dataUrl).then(r => r.json());
         console.log(`[power-infra] Loaded ${data.length} entries`);
         
-        // 変電所と送電線に分類
-        const substations = data.filter(e => 
-            !e.name.endsWith('線') && 
-            !e.name.endsWith('L') &&
-            !e.name.includes('幹線')
-        );
-        const transmissionLines = data.filter(e => 
-            e.name.endsWith('線') || 
-            e.name.endsWith('L') ||
-            e.name.includes('幹線')
-        );
+        // このファイルは変電所のみを含む統合済みマッチ結果
+        const substations = data;
+        const transmissionLines = [];
         
         console.log(`[power-infra] Substations: ${substations.length}, Lines: ${transmissionLines.length}`);
         
         // 座標があるエントリを確認
-        const withCoords = data.filter(e => e.lat != null && e.lon != null);
+        const withCoords = substations.filter(e => e.lat != null && e.lon != null);
         console.log(`[power-infra] Entries with coordinates: ${withCoords.length} (${(withCoords.length / data.length * 100).toFixed(1)}%)`);
         if (withCoords.length > 0) {
             console.log('[power-infra] Sample with coordinates:');
