@@ -100,7 +100,6 @@ function overpassToGeoJSON(overpassJson) {
   for (const r of rels) {
     if (!r.members || !r.tags || r.tags.power !== 'substation') continue;
     const outers = [];
-    const inners = [];
     for (const m of r.members) {
       if (m.type !== 'way') continue;
       const way = ways.find(w => w.id === m.ref);
@@ -116,14 +115,16 @@ function overpassToGeoJSON(overpassJson) {
         const first = ring[0];
         const last = ring[ring.length - 1];
         if (first[0] !== last[0] || first[1] !== last[1]) ring.push(first);
-        if (m.role === 'inner') inners.push(ring);
-        else outers.push(ring);
+        if (m.role !== 'inner') {
+          // Only include outer rings for now to avoid invalid MultiPolygon construction
+          outers.push(ring);
+        }
       }
     }
     if (outers.length) {
       features.push({
         type: 'Feature',
-        geometry: { type: 'MultiPolygon', coordinates: outers.map(o => [o]).concat(inners.length ? inners.map(i => [i]) : []) },
+        geometry: { type: 'MultiPolygon', coordinates: outers.map(o => [o]) },
         properties: { ...r.tags, id: r.id }
       });
     }
