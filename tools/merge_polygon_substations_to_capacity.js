@@ -79,8 +79,10 @@ function main() {
   console.log(`[merge] Existing capacity records: ${capacity.length}`);
   console.log(`[merge] Unique normalized names: ${existingNames.size}`);
 
-  // Add missing substations from polygons
+  // Add missing substations from polygons (Japan bbox only)
+  const JAPAN_BBOX = { minLat: 24.0, maxLat: 45.5, minLon: 123.0, maxLon: 148.0 };
   let added = 0;
+  let outsideBbox = 0;
   for (const f of polygons.features) {
     const name = f.properties?.name;
     if (!name) continue;
@@ -90,6 +92,13 @@ function main() {
     const centroid = featureCentroid(f);
     if (!centroid) continue;
     const [lon, lat] = centroid;
+    
+    // Skip if outside Japan
+    if (lat < JAPAN_BBOX.minLat || lat > JAPAN_BBOX.maxLat || 
+        lon < JAPAN_BBOX.minLon || lon > JAPAN_BBOX.maxLon) {
+      outsideBbox++;
+      continue;
+    }
 
     const voltage_kv = parseVoltageKv(f.properties);
     const newEntry = {
@@ -113,6 +122,7 @@ function main() {
   }
 
   console.log(`[merge] Added ${added} new entries from polygons`);
+  console.log(`[merge] Skipped ${outsideBbox} entries outside Japan bbox`);
   console.log(`[merge] Total records: ${capacity.length}`);
   console.log(`[merge] Writing to ${CAPACITY_PATH}`);
   fs.writeFileSync(CAPACITY_PATH, JSON.stringify(capacity, null, 2), 'utf8');
