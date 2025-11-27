@@ -14,18 +14,18 @@ const OUT_PATH = path.resolve('data/power/osm/substation_polygons.geojson');
 // Overpass API endpoint
 const OVERPASS_URL = 'https://overpass-api.de/api/interpreter';
 
-// For national coverage, we will tile Japan bbox roughly into manageable chunks to avoid timeouts.
-// Here we start with a single query; can be extended to tiles if needed.
-// Note: relations can represent multipolygons; we request ways and relations with area=yes.
+// Japan-only bounding box (tighter to exclude Korea/Russia)
+// South: 24°N (Okinawa), North: 45.5°N (Hokkaido)
+// West: 123°E (Yonaguni), East: 148°E (Hokkaido/Kuril)
 const overpassQuery = `
 [out:json][timeout:180];
 (
-  // power=substation polygons (ways + relations) nationwide bbox
-  way["power"="substation"](24.0,122.9,46.1,153.0);
-  relation["power"="substation"](24.0,122.9,46.1,153.0);
+  // power=substation polygons (ways + relations) Japan bbox only
+  way["power"="substation"](24.0,123.0,45.5,148.0);
+  relation["power"="substation"](24.0,123.0,45.5,148.0);
   // Some mappers use landuse=substation
-  way["landuse"="substation"](24.0,122.9,46.1,153.0);
-  relation["landuse"="substation"](24.0,122.9,46.1,153.0);
+  way["landuse"="substation"](24.0,123.0,45.5,148.0);
+  relation["landuse"="substation"](24.0,123.0,45.5,148.0);
 );
 out body;
 >;
