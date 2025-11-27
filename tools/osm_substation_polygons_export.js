@@ -14,6 +14,14 @@ const OUT_PATH = path.resolve('data/power/osm/substation_polygons.geojson');
 // Overpass API endpoint
 const OVERPASS_URL = 'https://overpass-api.de/api/interpreter';
 
+// Japan bbox filter (post-processing)
+const JAPAN_BBOX = {
+  minLat: 24.0,
+  maxLat: 45.5,
+  minLon: 123.0,
+  maxLon: 148.0
+};
+
 // Japan-only bounding box (tighter to exclude Korea/Russia)
 // South: 24°N (Okinawa), North: 45.5°N (Hokkaido)
 // West: 123°E (Yonaguni), East: 148°E (Hokkaido/Kuril)
@@ -88,6 +96,18 @@ function overpassToGeoJSON(overpassJson) {
       const first = coords[0];
       const last = coords[coords.length - 1];
       if (first[0] !== last[0] || first[1] !== last[1]) coords.push(first);
+      
+      // Calculate centroid for bbox filtering
+      const centroid = coords.reduce((acc, c) => [acc[0] + c[0], acc[1] + c[1]], [0, 0]);
+      const lon = centroid[0] / coords.length;
+      const lat = centroid[1] / coords.length;
+      
+      // Skip if outside Japan bbox
+      if (lat < JAPAN_BBOX.minLat || lat > JAPAN_BBOX.maxLat || 
+          lon < JAPAN_BBOX.minLon || lon > JAPAN_BBOX.maxLon) {
+        continue;
+      }
+      
       features.push({
         type: 'Feature',
         geometry: { type: 'Polygon', coordinates: [coords] },
@@ -122,6 +142,18 @@ function overpassToGeoJSON(overpassJson) {
       }
     }
     if (outers.length) {
+      // Calculate centroid from first outer ring for bbox filtering
+      const firstOuter = outers[0];
+      const centroid = firstOuter.reduce((acc, c) => [acc[0] + c[0], acc[1] + c[1]], [0, 0]);
+      const lon = centroid[0] / firstOuter.length;
+      const lat = centroid[1] / firstOuter.length;
+      
+      // Skip if outside Japan bbox
+      if (lat < JAPAN_BBOX.minLat || lat > JAPAN_BBOX.maxLat || 
+          lon < JAPAN_BBOX.minLon || lon > JAPAN_BBOX.maxLon) {
+        continue;
+      }
+      
       features.push({
         type: 'Feature',
         geometry: { type: 'MultiPolygon', coordinates: outers.map(o => [o]) },

@@ -15,6 +15,14 @@ const BASE_POLYGON_PATH = path.resolve('data/power/osm/substation_polygons.geojs
 const SUBSTATION_POINTS_PATH = path.resolve('data/power/capacity/tepco_substations_all_matched.json');
 const OUT_PATH = path.resolve('data/power/osm/substation_polygons_with_generated.geojson');
 
+// Japan bbox filter
+const JAPAN_BBOX = {
+  minLat: 24.0,
+  maxLat: 45.5,
+  minLon: 123.0,
+  maxLon: 148.0
+};
+
 function normalizeName(name) {
   if (!name) return '';
   return name.replace(/変電所/g, '') // remove suffix
@@ -159,8 +167,17 @@ function main() {
   let skippedNoCoord = 0;
   let matchedExisting = 0;
 
+  let skippedBbox = 0;
   for (const s of points) {
     if (s.lat == null || s.lon == null) { skippedNoCoord++; continue; }
+    
+    // Skip if outside Japan bbox
+    if (s.lat < JAPAN_BBOX.minLat || s.lat > JAPAN_BBOX.maxLat || 
+        s.lon < JAPAN_BBOX.minLon || s.lon > JAPAN_BBOX.maxLon) {
+      skippedBbox++;
+      continue;
+    }
+    
     const norm = normalizeName(s.name || s.name_normalized);
     if (norm && existingNameSet.has(norm)) { matchedExisting++; continue; }
 
@@ -209,6 +226,7 @@ function main() {
   console.log(`[missing-polygons] Generated synthetic polygons: ${generatedFeatures.length}`);
   console.log(`[missing-polygons] Existing matched (skipped): ${matchedExisting}`);
   console.log(`[missing-polygons] Missing coords skipped: ${skippedNoCoord}`);
+  console.log(`[missing-polygons] Outside Japan bbox (skipped): ${skippedBbox}`);
   console.log('[missing-polygons] Output:', OUT_PATH);
 }
 

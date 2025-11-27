@@ -61,11 +61,11 @@ export const powerMatrix = {
   //     "schemaVersion": "v1"
   //   }
   // },
-  "capacity_daily_tepco": {
+  "capacity_tepco_all": {
     "type": "point",
     "sourceType": "json",
-    "source": "../data/power/capacity/tepco_daily.json",
-    "title": "空き容量（日次・TEPCO）",
+    "source": "../data/power/capacity/tepco_substations_all_matched.json",
+    "title": "空き容量（TEPCO全変電所・統合版）",
     "minzoom": 6,
     "maxzoom": 17,
     "metadata": {
