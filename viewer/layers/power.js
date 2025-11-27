@@ -17,9 +17,9 @@ function addLineLayer(map, layerId, sourceId) {
         paint: {
             "line-color": [
                 "case",
-                [">=", ["get", "voltage_kv"], 500], "#d32f2f",
-                [">=", ["get", "voltage_kv"], 275], "#f57c00",
-                [">=", ["get", "voltage_kv"], 154], "#fbc02d",
+                [">=", ["coalesce", ["get", "voltage_kv"], -1], 500], "#d32f2f",
+                [">=", ["coalesce", ["get", "voltage_kv"], -1], 275], "#f57c00",
+                [">=", ["coalesce", ["get", "voltage_kv"], -1], 154], "#fbc02d",
                 "#1976d2"
             ],
             "line-width": [
