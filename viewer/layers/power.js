@@ -44,7 +44,7 @@ function addSymbolLayer(map, layerId, sourceId) {
             "circle-radius": ["interpolate", ["linear"], ["zoom"], 6, 4, 10, 6, 14, 8],
             "circle-color": [
                 "case",
-                ["has", "available_kw"],
+                ["==", ["typeof", ["get", "available_kw"]], "number"],
                 [
                     "interpolate", ["linear"], ["get", "available_kw"],
                     0, "#ff0000",
