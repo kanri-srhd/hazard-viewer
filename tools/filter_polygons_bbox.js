@@ -60,9 +60,9 @@ function isInJapanBbox(centroid, properties) {
   
   const [lon, lat] = centroid;
   
-  // More strict filtering for areas near Korea
-  // Below 38°N, longitude must be > 128°E (excludes Korean peninsula)
-  if (lat < 38.0 && lon < 128.0) return false;
+  // Exclude Korean peninsula (approx window)
+  // Lat 33-39°N and Lon 124-128°E considered Korea region
+  if (lat >= 33.0 && lat <= 39.0 && lon >= 124.0 && lon < 128.0) return false;
 
   // Exclude Russian Far East (Primorsky Krai, Sakhalin)
   // If longitude > 142°E and latitude > 44°N, likely Sakhalin/North Kurils

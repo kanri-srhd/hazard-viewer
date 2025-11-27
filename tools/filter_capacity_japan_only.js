@@ -11,12 +11,13 @@ const JAPAN_BBOX = { minLat: 24.0, maxLat: 45.5, minLon: 123.0, maxLon: 148.0 };
 
 const hasHangul = (n) => /[\uAC00-\uD7AF]/.test(n||'');
 const hasCyrillic = (n) => /[\u0400-\u04FF]/.test(n||'');
+const chineseBlacklistTerms = ['变电站','分局','供电局'];
 
 function isJapanLatLon(lat, lon) {
   if (lat == null || lon == null) return false;
   if (lat < JAPAN_BBOX.minLat || lat > JAPAN_BBOX.maxLat || lon < JAPAN_BBOX.minLon || lon > JAPAN_BBOX.maxLon) return false;
-  // Korea peninsula
-  if (lat <= 38.0 && lon < 128.0) return false;
+  // Korea peninsula (approx window)
+  if (lat >= 33.0 && lat <= 39.0 && lon >= 124.0 && lon < 128.0) return false;
   // Primorsky/Amur coast
   if (lat > 43.0 && lon > 131.0 && lon < 142.0) return false;
   // Sakhalin/North Kurils
@@ -31,6 +32,8 @@ function shouldKeep(entry) {
   const lat = entry.lat; const lon = entry.lon;
   // Language blacklist
   if (hasHangul(name) || hasCyrillic(name)) return false;
+  // Chinese-specific utility markers commonly used outside Japan
+  if (chineseBlacklistTerms.some(t => name.includes(t))) return false;
   // Known foreign dataset marker
   if ((name||'').toLowerCase().includes('north korea uncovered')) return false;
   // Geofence

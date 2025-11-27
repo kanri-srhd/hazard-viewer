@@ -45,9 +45,8 @@ function isInJapan(lat, lon, name) {
     return false;
   }
   
-  // More strict filtering for areas near Korea
-  // Below 38°N, longitude must be > 128°E (excludes Korean peninsula)
-  if (lat < 38.0 && lon < 128.0) return false;
+  // Exclude Korean peninsula (approx window)
+  if (lat >= 33.0 && lat <= 39.0 && lon >= 124.0 && lon < 128.0) return false;
   // Exclude Russian Far East regions
   if (lon > 142 && lat > 44) return false;
   if (lat > 43 && lon > 131 && lon < 142) return false;
