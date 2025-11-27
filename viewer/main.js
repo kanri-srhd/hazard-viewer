@@ -147,8 +147,8 @@ map.on("load", () => {
         id: "gsi-photo-layer",
         type: "raster",
         source: "gsi-photo",
-        layout: { visibility: "none" },
-        paint: { "raster-opacity": 0.4 }
+        layout: { visibility: "visible" },
+        paint: { "raster-opacity": 0.8 }
     });
 
     // --------------------------------------------------
