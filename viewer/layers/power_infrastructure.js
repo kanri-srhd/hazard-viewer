@@ -290,11 +290,12 @@ async function addPowerInfraLayer(map) {
                     'text-color': '#4b0082',
                     'text-halo-color': '#ffffff',
                     'text-halo-width': 1.5,
+                    // ズームをトップレベルの interpolate で使用し、ズームごとの面積しきい値で不透明度を切り替え
                     'text-opacity': [
-                        'case',
-                        ['>', ['coalesce', ['get', 'area_est_m2'], 0], ['interpolate', ['linear'], ['zoom'], 10, 2000, 12, 1000, 14, 200]],
-                        1,
-                        0.0
+                        'interpolate', ['linear'], ['zoom'],
+                        10, ['step', ['coalesce', ['get', 'area_est_m2'], 0], 0.0, 2000, 1.0],
+                        12, ['step', ['coalesce', ['get', 'area_est_m2'], 0], 0.0, 1000, 1.0],
+                        14, ['step', ['coalesce', ['get', 'area_est_m2'], 0], 0.0, 200, 1.0]
                     ]
                 }
             });
