@@ -45,6 +45,7 @@ tiles/
 
 # Allow OSM power data for viewer
 !data/power/osm/*.geojson
+data/power/capacity/tepco_osm_test100.json
 
 # Allow capacity json for viewer
 !data/capacity/*.json
