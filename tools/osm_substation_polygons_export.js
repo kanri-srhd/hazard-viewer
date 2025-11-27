@@ -75,7 +75,9 @@ function overpassToGeoJSON(overpassJson) {
     const coords = [];
     for (const nid of w.nodes) {
       const n = nodes.get(nid);
-      if (n) coords.push([n.lon, n.lat]);
+      if (n && typeof n.lon === 'number' && typeof n.lat === 'number') {
+        coords.push([n.lon, n.lat]);
+      }
     }
     // Ensure closed ring
     if (coords.length >= 3) {
@@ -102,7 +104,9 @@ function overpassToGeoJSON(overpassJson) {
       const ring = [];
       for (const nid of way.nodes) {
         const n = nodes.get(nid);
-        if (n) ring.push([n.lon, n.lat]);
+        if (n && typeof n.lon === 'number' && typeof n.lat === 'number') {
+          ring.push([n.lon, n.lat]);
+        }
       }
       if (ring.length >= 3) {
         const first = ring[0];
