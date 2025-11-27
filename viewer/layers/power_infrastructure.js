@@ -17,6 +17,7 @@ const LINE_LAYER_ID = "power-line-layer";
 const SUBSTATION_POLYGONS_SOURCE_ID = "power-substation-polygons";
 const SUBSTATION_POLYGONS_FILL_ID = "power-substation-polygons-fill";
 const SUBSTATION_POLYGONS_OUTLINE_ID = "power-substation-polygons-outline";
+const SUBSTATION_POLYGONS_LABEL_ID = "power-substation-polygons-label";
 
 // --------------------------------------------
 // データロード
@@ -238,6 +239,44 @@ async function addPowerInfraLayer(map) {
             },
             layout: { visibility: 'visible' }
         });
+
+        // ポリゴン名称ラベル（Open Infrastructure Map 風）
+        const style2 = map.getStyle && map.getStyle();
+        const hasGlyphs2 = style2 && typeof style2.glyphs === 'string' && style2.glyphs.length > 0;
+        if (hasGlyphs2) {
+            map.addLayer({
+                id: SUBSTATION_POLYGONS_LABEL_ID,
+                type: 'symbol',
+                source: SUBSTATION_POLYGONS_SOURCE_ID,
+                filter: ["has", "name"],
+                layout: {
+                    'text-field': [
+                        'coalesce',
+                        ['get', 'name'],
+                        ['get', 'operator'],
+                        ''
+                    ],
+                    'text-size': [
+                        'interpolate', ['linear'], ['zoom'],
+                        6, 11,
+                        10, 13,
+                        14, 16
+                    ],
+                    'symbol-placement': 'point',
+                    'text-padding': 2,
+                    'text-max-width': 12,
+                    'text-allow-overlap': false,
+                    'visibility': 'visible'
+                },
+                paint: {
+                    'text-color': '#4b0082',
+                    'text-halo-color': '#ffffff',
+                    'text-halo-width': 1.5
+                }
+            });
+        } else {
+            console.warn('[power-infra] Skipping polygon label layer: style.glyphs is not configured');
+        }
     } catch (err) {
         console.warn('[power-infra] Failed to add substation polygons:', err);
     }
@@ -266,6 +305,9 @@ function togglePowerInfra() {
     }
     if (mapInstance.getLayer(SUBSTATION_POLYGONS_OUTLINE_ID)) {
         mapInstance.setLayoutProperty(SUBSTATION_POLYGONS_OUTLINE_ID, 'visibility', visibility);
+    }
+    if (mapInstance.getLayer(SUBSTATION_POLYGONS_LABEL_ID)) {
+        mapInstance.setLayoutProperty(SUBSTATION_POLYGONS_LABEL_ID, 'visibility', visibility);
     }
 
     console.log(`[power-infra] Visibility: ${visibility}`);
