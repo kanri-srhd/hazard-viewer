@@ -266,7 +266,7 @@ async function addPowerInfraLayer(map) {
                 id: SUBSTATION_POLYGONS_LABEL_ID,
                 type: 'symbol',
                 source: SUBSTATION_POLYGONS_SOURCE_ID,
-                filter: ["has", "name"],
+                // Show labels even when 'name' is missing (fallback to operator)
                 layout: {
                     'text-field': [
                         'coalesce',
