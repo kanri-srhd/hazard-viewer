@@ -140,24 +140,30 @@ async function addPowerInfraLayer(map) {
             }
         });
 
-        // 変電所ラベル
-        map.addLayer({
-            id: SUBSTATION_LABEL_ID,
-            type: "symbol",
-            source: SOURCE_ID,
-            layout: {
-                "text-field": ["get", "name"],
-                "text-size": 11,
-                "text-offset": [0, 1.5],
-                "text-anchor": "top",
-                "visibility": "none"
-            },
-            paint: {
-                "text-color": "#333333",
-                "text-halo-color": "#ffffff",
-                "text-halo-width": 2
-            }
-        });
+        // 変電所ラベル（glyphs未設定スタイルではスキップ）
+        const style = map.getStyle && map.getStyle();
+        const hasGlyphs = style && typeof style.glyphs === 'string' && style.glyphs.length > 0;
+        if (hasGlyphs) {
+            map.addLayer({
+                id: SUBSTATION_LABEL_ID,
+                type: "symbol",
+                source: SOURCE_ID,
+                layout: {
+                    "text-field": ["get", "name"],
+                    "text-size": 11,
+                    "text-offset": [0, 1.5],
+                    "text-anchor": "top",
+                    "visibility": "none"
+                },
+                paint: {
+                    "text-color": "#333333",
+                    "text-halo-color": "#ffffff",
+                    "text-halo-width": 2
+                }
+            });
+        } else {
+            console.warn('[power-infra] Skipping label layer: style.glyphs is not configured');
+        }
         
         // クリックイベント
         map.on('click', SUBSTATION_LAYER_ID, (e) => {
