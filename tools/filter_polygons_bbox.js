@@ -16,6 +16,12 @@ const JAPAN_BBOX = {
   maxLon: 148.0
 };
 
+// Korean characters filter (Hangul)
+function hasKoreanCharacters(name) {
+  if (!name) return false;
+  return /[\uAC00-\uD7AF]/.test(name);
+}
+
 function calculateCentroid(geometry) {
   let totalLon = 0, totalLat = 0, count = 0;
   
@@ -38,9 +44,18 @@ function calculateCentroid(geometry) {
   return count > 0 ? [totalLon / count, totalLat / count] : null;
 }
 
-function isInJapanBbox(centroid) {
+function isInJapanBbox(centroid, properties) {
   if (!centroid) return false;
+  
+  // Exclude Korean names
+  if (hasKoreanCharacters(properties?.name)) return false;
+  
   const [lon, lat] = centroid;
+  
+  // More strict filtering for areas near Korea
+  // Below 38°N, longitude must be > 128°E (excludes Korean peninsula)
+  if (lat < 38.0 && lon < 128.0) return false;
+  
   return lat >= JAPAN_BBOX.minLat && lat <= JAPAN_BBOX.maxLat &&
          lon >= JAPAN_BBOX.minLon && lon <= JAPAN_BBOX.maxLon;
 }
@@ -55,7 +70,7 @@ async function main() {
   // Filter features by Japan bbox
   const filtered = geojson.features.filter(f => {
     const centroid = calculateCentroid(f.geometry);
-    return isInJapanBbox(centroid);
+    return isInJapanBbox(centroid, f.properties);
   });
   
   const removedCount = originalCount - filtered.length;

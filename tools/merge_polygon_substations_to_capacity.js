@@ -81,6 +81,7 @@ function main() {
 
   // Add missing substations from polygons (Japan bbox only)
   const JAPAN_BBOX = { minLat: 24.0, maxLat: 45.5, minLon: 123.0, maxLon: 148.0 };
+   let koreanNames = 0;
   let added = 0;
   let outsideBbox = 0;
   for (const f of polygons.features) {
@@ -94,9 +95,12 @@ function main() {
     const [lon, lat] = centroid;
     
     // Skip if outside Japan
-    if (lat < JAPAN_BBOX.minLat || lat > JAPAN_BBOX.maxLat || 
-        lon < JAPAN_BBOX.minLon || lon > JAPAN_BBOX.maxLon) {
-      outsideBbox++;
+      if (!isInJapan(lat, lon, name)) {
+        if (hasKoreanCharacters(name)) {
+          koreanNames++;
+        } else {
+          outsideBbox++;
+        }
       continue;
     }
 
@@ -123,7 +127,31 @@ function main() {
 
   console.log(`[merge] Added ${added} new entries from polygons`);
   console.log(`[merge] Skipped ${outsideBbox} entries outside Japan bbox`);
+  console.log(`[merge] Skipped ${koreanNames} entries with Korean names`);
   console.log(`[merge] Total records: ${capacity.length}`);
+  
+// Korean characters filter (Hangul)
+function hasKoreanCharacters(name) {
+  if (!name) return false;
+  return /[\uAC00-\uD7AF]/.test(name);
+}
+
+function isInJapan(lat, lon, name) {
+  // Exclude Korean names
+  if (hasKoreanCharacters(name)) return false;
+  
+  // Basic bbox check
+  if (lat < JAPAN_BBOX.minLat || lat > JAPAN_BBOX.maxLat || 
+      lon < JAPAN_BBOX.minLon || lon > JAPAN_BBOX.maxLon) {
+    return false;
+  }
+  
+  // More strict filtering for areas near Korea
+  // Below 38°N, longitude must be > 128°E (excludes Korean peninsula)
+  if (lat < 38.0 && lon < 128.0) return false;
+  
+  return true;
+}
   console.log(`[merge] Writing to ${CAPACITY_PATH}`);
   fs.writeFileSync(CAPACITY_PATH, JSON.stringify(capacity, null, 2), 'utf8');
   console.log('[merge] Done');

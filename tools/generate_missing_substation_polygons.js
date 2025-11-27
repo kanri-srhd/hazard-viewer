@@ -23,6 +23,29 @@ const JAPAN_BBOX = {
   maxLon: 148.0
 };
 
+// Korean characters filter (Hangul)
+function hasKoreanCharacters(name) {
+  if (!name) return false;
+  return /[\uAC00-\uD7AF]/.test(name);
+}
+
+function isInJapan(lat, lon, name) {
+  // Exclude Korean names
+  if (hasKoreanCharacters(name)) return false;
+  
+  // Basic bbox check
+  if (lat < JAPAN_BBOX.minLat || lat > JAPAN_BBOX.maxLat || 
+      lon < JAPAN_BBOX.minLon || lon > JAPAN_BBOX.maxLon) {
+    return false;
+  }
+  
+  // More strict filtering for areas near Korea
+  // Below 38°N, longitude must be > 128°E (excludes Korean peninsula)
+  if (lat < 38.0 && lon < 128.0) return false;
+  
+  return true;
+}
+
 function normalizeName(name) {
   if (!name) return '';
   return name.replace(/変電所/g, '') // remove suffix
@@ -168,13 +191,17 @@ function main() {
   let matchedExisting = 0;
 
   let skippedBbox = 0;
+  let skippedKorean = 0;
   for (const s of points) {
     if (s.lat == null || s.lon == null) { skippedNoCoord++; continue; }
     
     // Skip if outside Japan bbox
-    if (s.lat < JAPAN_BBOX.minLat || s.lat > JAPAN_BBOX.maxLat || 
-        s.lon < JAPAN_BBOX.minLon || s.lon > JAPAN_BBOX.maxLon) {
-      skippedBbox++;
+    if (!isInJapan(s.lat, s.lon, s.name)) {
+      if (hasKoreanCharacters(s.name)) {
+        skippedKorean++;
+      } else {
+        skippedBbox++;
+      }
       continue;
     }
     
@@ -227,6 +254,7 @@ function main() {
   console.log(`[missing-polygons] Existing matched (skipped): ${matchedExisting}`);
   console.log(`[missing-polygons] Missing coords skipped: ${skippedNoCoord}`);
   console.log(`[missing-polygons] Outside Japan bbox (skipped): ${skippedBbox}`);
+  console.log(`[missing-polygons] Korean names (skipped): ${skippedKorean}`);
   console.log('[missing-polygons] Output:', OUT_PATH);
 }
 
