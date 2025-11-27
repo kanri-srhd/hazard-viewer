@@ -235,7 +235,14 @@ async function addPowerInfraLayer(map) {
             source: SUBSTATION_POLYGONS_SOURCE_ID,
             paint: {
                 'fill-color': '#d5a6f5',
-                'fill-opacity': 0.35
+                'fill-opacity': [
+                    'interpolate', ['linear'], ['coalesce', ['get', 'voltage_kv_numeric'], 66],
+                    22, 0.25,
+                    66, 0.3,
+                    154, 0.35,
+                    275, 0.4,
+                    500, 0.45
+                ]
             },
             layout: { visibility: 'visible' }
         });
@@ -282,7 +289,13 @@ async function addPowerInfraLayer(map) {
                 paint: {
                     'text-color': '#4b0082',
                     'text-halo-color': '#ffffff',
-                    'text-halo-width': 1.5
+                    'text-halo-width': 1.5,
+                    'text-opacity': [
+                        'case',
+                        ['>', ['coalesce', ['get', 'area_est_m2'], 0], ['interpolate', ['linear'], ['zoom'], 10, 2000, 12, 1000, 14, 200]],
+                        1,
+                        0.0
+                    ]
                 }
             });
         } else {
