@@ -67,6 +67,18 @@ function svgToDataUri(svgString) {
 // ======================================================================
 
 const MOVEEND_DEBOUNCE = 350;  // moveend デバウンス時間（ms）
+const MOVEEND_MIN_DISTANCE_METERS = 300; // 中心移動がこの距離未満なら判定スキップ
+
+// 距離計算（ハバースイン）
+function distanceMeters(lat1, lon1, lat2, lon2) {
+    const R = 6371000; // 地球半径（m）
+    const toRad = (deg) => deg * Math.PI / 180;
+    const dLat = toRad(lat2 - lat1);
+    const dLon = toRad(lon2 - lon1);
+    const a = Math.sin(dLat / 2) ** 2 + Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) ** 2;
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    return R * c;
+}
 
 // ======================================================================
 // グローバル変数
@@ -78,6 +90,7 @@ let currentPrefCode = null;  // 現在の都道府県コード
 let moveendDebounceTimer = null;  // moveend デバウンス用タイマー
 let prefSelectChanging = false;  // セレクト変更中フラグ（moveend 二重発火防止）
 let lastSearchQuery = "";  // 最後の検索クエリ（Popup表示用）
+let lastPrefCheckCenter = null; // 直近の都道府県判定を行った中心座標
 
 // ======================================================================
 // 地図初期化（大阪本社）
@@ -184,6 +197,8 @@ map.on("load", () => {
     // 初期位置の都道府県判定
     // --------------------------------------------------
     const center = map.getCenter();
+    // 初期中心を記録（直後の moveend で二重判定しないため）
+    lastPrefCheckCenter = { lat: center.lat, lng: center.lng };
     updatePrefectureByCoords(center.lat, center.lng);
 });
 
@@ -322,14 +337,15 @@ function updatePrefectureByCoords(lat, lng) {
     const prefCode = typeof pref === "string" ? pref : pref.code;
     const prefName = typeof pref === "string" ? "" : (pref.name || "");
 
-    console.log("[main.js] 都道府県検出:", prefName || prefCode, `(${prefCode})`);
-
-    // 前回と同じ県ならスキップ
+    // 前回と同じ県ならスキップ（ログも抑制）
     if (currentPrefCode === prefCode) {
         return;
     }
 
     currentPrefCode = prefCode;
+
+    // 変更があった時だけログ
+    console.log("[main.js] 都道府県検出:", prefName || prefCode, `(${prefCode})`);
 
     // ハザードレイヤーの県コード更新
     updateHazardPref(prefCode);
@@ -359,6 +375,17 @@ map.on("moveend", () => {
     clearTimeout(moveendDebounceTimer);
     moveendDebounceTimer = setTimeout(() => {
         const center = map.getCenter();
+
+        // 中心移動が閾値未満ならスキップ（ログ抑制）
+        if (lastPrefCheckCenter) {
+            const dist = distanceMeters(lastPrefCheckCenter.lat, lastPrefCheckCenter.lng, center.lat, center.lng);
+            if (dist < MOVEEND_MIN_DISTANCE_METERS) {
+                console.log("[main.js] moveend スキップ（中心移動が閾値未満）:", Math.round(dist), "m");
+                return;
+            }
+        }
+
+        lastPrefCheckCenter = { lat: center.lat, lng: center.lng };
         updatePrefectureByCoords(center.lat, center.lng);
     }, MOVEEND_DEBOUNCE);
 });
