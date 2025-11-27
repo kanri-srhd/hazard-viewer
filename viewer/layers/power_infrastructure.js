@@ -213,9 +213,20 @@ async function addPowerInfraLayer(map) {
 
     // 変電所敷地ポリゴン（OSM）
     try {
+        // Prefer combined (OSM + synthetic) if exists
+        const combinedPath = resolveDataPath('power/osm/substation_polygons_with_generated.geojson');
+        const basePath = resolveDataPath('power/osm/substation_polygons.geojson');
+        let polygonDataPath = combinedPath;
+        try {
+            // Attempt HEAD request to see if combined file is accessible
+            await fetch(combinedPath, { method: 'HEAD' }).then(r => { if (!r.ok) throw new Error('Not found'); });
+        } catch (_) {
+            polygonDataPath = basePath;
+            console.warn('[power-infra] Using base OSM polygons only (combined file not found)');
+        }
         map.addSource(SUBSTATION_POLYGONS_SOURCE_ID, {
             type: 'geojson',
-            data: resolveDataPath('power/osm/substation_polygons.geojson')
+            data: polygonDataPath
         });
 
         map.addLayer({
