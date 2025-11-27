@@ -146,7 +146,7 @@ async function addPowerInfraLayer(map) {
                 "circle-stroke-width": 1
             },
             layout: {
-                "visibility": "none"
+                "visibility": "visible"
             }
         });
 

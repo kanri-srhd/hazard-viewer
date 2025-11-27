@@ -98,6 +98,7 @@ let lastPrefCheckCenter = null; // 直近の都道府県判定を行った中心
 
 const map = new maplibregl.Map({
     container: "map",
+    localIdeographFontFamily: "Meiryo, Yu Gothic UI, MS PGothic, Segoe UI Symbol",
     style: {
         version: 8,
         glyphs: "https://demotiles.maplibre.org/font/{fontstack}/{range}.pbf",
