@@ -100,6 +100,7 @@ const map = new maplibregl.Map({
     container: "map",
     style: {
         version: 8,
+        glyphs: "https://demotiles.maplibre.org/font/{fontstack}/{range}.pbf",
         sources: {
             "gsi-std": {
                 type: "raster",
