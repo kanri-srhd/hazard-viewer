@@ -29,9 +29,15 @@ function hasKoreanCharacters(name) {
   return /[\uAC00-\uD7AF]/.test(name);
 }
 
+
+function hasCyrillicCharacters(name) {
+  if (!name) return false;
+  return /[\u0400-\u04FF]/.test(name);
+}
+
 function isInJapan(lat, lon, name) {
-  // Exclude Korean names
-  if (hasKoreanCharacters(name)) return false;
+  // Exclude foreign-language names (Korean/Chinese/Cyrillic)
+  if (hasKoreanCharacters(name) || hasCyrillicCharacters(name)) return false;
   
   // Basic bbox check
   if (lat < JAPAN_BBOX.minLat || lat > JAPAN_BBOX.maxLat || 
@@ -42,6 +48,9 @@ function isInJapan(lat, lon, name) {
   // More strict filtering for areas near Korea
   // Below 38°N, longitude must be > 128°E (excludes Korean peninsula)
   if (lat < 38.0 && lon < 128.0) return false;
+  // Exclude Russian Far East regions
+  if (lon > 142 && lat > 44) return false;
+  if (lat > 43 && lon > 131 && lon < 142) return false;
   
   return true;
 }

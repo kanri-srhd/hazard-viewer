@@ -22,6 +22,13 @@ function hasKoreanCharacters(name) {
   return /[\uAC00-\uD7AF]/.test(name);
 }
 
+
+// Cyrillic (Russian etc.)
+function hasCyrillicCharacters(name) {
+  if (!name) return false;
+  return /[\u0400-\u04FF]/.test(name);
+}
+
 function calculateCentroid(geometry) {
   let totalLon = 0, totalLat = 0, count = 0;
   
@@ -47,14 +54,21 @@ function calculateCentroid(geometry) {
 function isInJapanBbox(centroid, properties) {
   if (!centroid) return false;
   
-  // Exclude Korean names
-  if (hasKoreanCharacters(properties?.name)) return false;
+  // Exclude names indicating foreign data
+  const n = properties?.name || '';
+  if (hasKoreanCharacters(n) || hasCyrillicCharacters(n)) return false;
   
   const [lon, lat] = centroid;
   
   // More strict filtering for areas near Korea
   // Below 38°N, longitude must be > 128°E (excludes Korean peninsula)
   if (lat < 38.0 && lon < 128.0) return false;
+
+  // Exclude Russian Far East (Primorsky Krai, Sakhalin)
+  // If longitude > 142°E and latitude > 44°N, likely Sakhalin/North Kurils
+  if (lon > 142 && lat > 44) return false;
+  // If latitude > 43°N and longitude > 131°E and < 142°E (Primorsky/Amur coast), exclude
+  if (lat > 43 && lon > 131 && lon < 142) return false;
   
   return lat >= JAPAN_BBOX.minLat && lat <= JAPAN_BBOX.maxLat &&
          lon >= JAPAN_BBOX.minLon && lon <= JAPAN_BBOX.maxLon;
