@@ -135,7 +135,7 @@ async function main() {
   console.log(`[osm-substations] Polygons assembled: ${geojson.features.length}`);
 
   fs.mkdirSync(path.dirname(OUT_PATH), { recursive: true });
-  fs.writeFileSync(OUT_PATH, JSON.stringify(geojson));
+  fs.writeFileSync(OUT_PATH, JSON.stringify(geojson, null, 2), 'utf8');
   console.log('[osm-substations] Saved to', OUT_PATH);
 }
 
