@@ -51,27 +51,38 @@ function calculateCentroid(geometry) {
   return count > 0 ? [totalLon / count, totalLat / count] : null;
 }
 
-function isInJapanBbox(centroid, properties) {
-  if (!centroid) return false;
+function isInJapanBboxOrTagForeign(centroid, properties) {
+  if (!centroid) return { keep: false, foreign: false };
   
-  // Exclude names indicating foreign data
+  // Foreign by name
   const n = properties?.name || '';
-  if (hasKoreanCharacters(n) || hasCyrillicCharacters(n)) return false;
+  let foreign = hasKoreanCharacters(n) || hasCyrillicCharacters(n);
   
   const [lon, lat] = centroid;
   
+  // Whitelist windows for Japanese islands (override exclusions)
+  const IN_HOKKAIDO = (lat >= 41.0 && lat <= 46.0 && lon >= 139.0 && lon <= 146.5);
+  const IN_HONSHU   = (lat >= 33.0 && lat <= 41.0 && lon >= 130.0 && lon <= 142.0);
+  const IN_SHIKOKU  = (lat >= 32.5 && lat <= 34.9 && lon >= 132.0 && lon <= 134.9);
+  const IN_KYUSHU   = (lat >= 30.5 && lat <= 33.9 && lon >= 129.0 && lon <= 132.5);
+  const IN_OKINAWA  = (lat >= 24.0 && lat <= 27.5 && lon >= 122.0 && lon <= 131.0);
+  if (IN_HOKKAIDO || IN_HONSHU || IN_SHIKOKU || IN_KYUSHU || IN_OKINAWA) {
+    return { keep: true, foreign };
+  }
+  
   // Exclude Korean peninsula (approx window)
   // Lat 33-39°N and Lon 124-128°E considered Korea region
-  if (lat >= 33.0 && lat <= 39.0 && lon >= 124.0 && lon < 128.0) return false;
+  if (lat >= 33.0 && lat <= 39.0 && lon >= 124.0 && lon < 128.0) foreign = true;
 
   // Exclude Russian Far East (Primorsky Krai, Sakhalin)
   // If longitude > 142°E and latitude > 44°N, likely Sakhalin/North Kurils
-  if (lon > 142 && lat > 44) return false;
+  if (lon > 142 && lat > 44) foreign = true;
   // If latitude > 43°N and longitude > 131°E and < 142°E (Primorsky/Amur coast), exclude
-  if (lat > 43 && lon > 131 && lon < 142) return false;
+  if (lat > 43 && lon > 131 && lon < 142) foreign = true;
   
-  return lat >= JAPAN_BBOX.minLat && lat <= JAPAN_BBOX.maxLat &&
-         lon >= JAPAN_BBOX.minLon && lon <= JAPAN_BBOX.maxLon;
+  const inBbox = lat >= JAPAN_BBOX.minLat && lat <= JAPAN_BBOX.maxLat &&
+                 lon >= JAPAN_BBOX.minLon && lon <= JAPAN_BBOX.maxLon;
+  return { keep: inBbox, foreign };
 }
 
 async function main() {
@@ -81,14 +92,21 @@ async function main() {
   const originalCount = geojson.features.length;
   console.log(`[filter-bbox] Original features: ${originalCount}`);
   
-  // Filter features by Japan bbox
-  const filtered = geojson.features.filter(f => {
+  // Tag foreign and keep data; filter only outside bbox
+  const tagged = [];
+  for (const f of geojson.features) {
     const centroid = calculateCentroid(f.geometry);
-    return isInJapanBbox(centroid, f.properties);
-  });
+    const result = isInJapanBboxOrTagForeign(centroid, f.properties);
+    if (result.keep) {
+      if (result.foreign) {
+        f.properties = { ...(f.properties || {}), is_foreign: true };
+      }
+      tagged.push(f);
+    }
+  }
   
-  const removedCount = originalCount - filtered.length;
-  console.log(`[filter-bbox] Filtered features: ${filtered.length}`);
+  const removedCount = originalCount - tagged.length;
+  console.log(`[filter-bbox] Filtered features: ${tagged.length}`);
   console.log(`[filter-bbox] Removed (outside Japan): ${removedCount}`);
   
   // Backup original
@@ -97,7 +115,7 @@ async function main() {
     console.log(`[filter-bbox] Backup saved to ${BACKUP_PATH}`);
     
     // Write filtered
-    geojson.features = filtered;
+    geojson.features = tagged;
     fs.writeFileSync(OUTPUT_PATH, JSON.stringify(geojson, null, 2), 'utf8');
     console.log(`[filter-bbox] Saved filtered to ${OUTPUT_PATH}`);
   } else {

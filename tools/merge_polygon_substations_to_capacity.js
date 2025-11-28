@@ -94,14 +94,15 @@ function main() {
     if (!centroid) continue;
     const [lon, lat] = centroid;
     
-    // Skip if outside Japan
-      if (!isInJapan(lat, lon, name)) {
-        if (hasKoreanCharacters(name)) {
-          koreanNames++;
-        } else {
-          outsideBbox++;
-        }
-      continue;
+    // Determine foreign flag instead of hard exclusion
+    let is_foreign = false;
+    if (!isInJapan(lat, lon, name)) {
+      is_foreign = true;
+      if (hasKoreanCharacters(name)) {
+        koreanNames++;
+      } else {
+        outsideBbox++;
+      }
     }
 
     const voltage_kv = parseVoltageKv(f.properties);
@@ -118,7 +119,8 @@ function main() {
       matched_source: 'polygon_only',
       confidence: 1.0,
       notes: 'Generated from OSM polygon (no capacity data available)',
-      geocoded_from: 'polygon_centroid'
+      geocoded_from: 'polygon_centroid',
+      is_foreign: is_foreign
     };
     capacity.push(newEntry);
     existingNames.add(norm);

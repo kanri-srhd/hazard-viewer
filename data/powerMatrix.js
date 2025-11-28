@@ -31,21 +31,21 @@ export const powerMatrix = {
   //     "schemaVersion": "v1"
   //   }
   // },
-  // "substations_osm": {
-  //   "type": "symbol",
-  //   "sourceType": "geojson",
-  //   "source": "../data/power/substations/osm.geojson",
-  //   "title": "変電所（OSM）",
-  //   "minzoom": 6,
-  //   "maxzoom": 17,
-  //   "metadata": {
-  //     "category": "power",
-  //     "subtype": "substations",
-  //     "provider": "OSM",
-  //     "updateCadence": "monthly",
-  //     "schemaVersion": "v1"
-  //   }
-  // },
+  "substations_osm": {
+    "type": "symbol",
+    "sourceType": "geojson",
+    "source": "../data/power/osm/substations_osm.geojson",
+    "title": "変電所（OSMポイント・全国）",
+    "minzoom": 6,
+    "maxzoom": 17,
+    "metadata": {
+      "category": "power",
+      "subtype": "substations",
+      "provider": "OSM",
+      "updateCadence": "monthly",
+      "schemaVersion": "v1"
+    }
+  },
   // "capacity_nationwide": {
   //   "type": "point",
   //   "sourceType": "json",

@@ -72631,5 +72631,37 @@
     "confidence": 1,
     "notes": "Generated from OSM polygon (no capacity data available)",
     "geocoded_from": "polygon_centroid"
+  },
+  {
+    "id": "polygon_polygon_681046023",
+    "name": "草河口变电站",
+    "name_normalized": "草河口变电站",
+    "utility": "Unknown",
+    "voltage_kv": 220,
+    "available_kw": null,
+    "updated_at": null,
+    "lat": 40.896874376234635,
+    "lon": 123.910433063295,
+    "matched_source": "polygon_only",
+    "confidence": 1,
+    "notes": "Generated from OSM polygon (no capacity data available)",
+    "geocoded_from": "polygon_centroid",
+    "is_foreign": false
+  },
+  {
+    "id": "polygon_polygon_1281775394",
+    "name": "辽宁省丹东公路路政管理局东港分局",
+    "name_normalized": "辽宁省丹东公路路政管理局东港分局",
+    "utility": "Unknown",
+    "voltage_kv": 66,
+    "available_kw": null,
+    "updated_at": null,
+    "lat": 39.86558457002649,
+    "lon": 124.147040424209,
+    "matched_source": "polygon_only",
+    "confidence": 1,
+    "notes": "Generated from OSM polygon (no capacity data available)",
+    "geocoded_from": "polygon_centroid",
+    "is_foreign": false
   }
 ]

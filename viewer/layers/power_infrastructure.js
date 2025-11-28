@@ -18,6 +18,8 @@ const SUBSTATION_POLYGONS_SOURCE_ID = "power-substation-polygons";
 const SUBSTATION_POLYGONS_FILL_ID = "power-substation-polygons-fill";
 const SUBSTATION_POLYGONS_OUTLINE_ID = "power-substation-polygons-outline";
 const SUBSTATION_POLYGONS_LABEL_ID = "power-substation-polygons-label";
+const OSM_SUBSTATIONS_SOURCE_ID = "osm-substations-src";
+const OSM_SUBSTATIONS_LAYER_ID = "osm-substations-layer";
 
 // --------------------------------------------
 // データロード
@@ -211,6 +213,51 @@ async function addPowerInfraLayer(map) {
         });
     }
 
+    // OSM変電所ポイント（補完用）
+    try {
+        const osmPointsPath = resolveDataPath('power/osm/substations_osm.geojson');
+        // HEADで存在確認
+        await fetch(osmPointsPath, { method: 'HEAD' }).then(r => { if (!r.ok) throw new Error('Not found'); });
+        map.addSource(OSM_SUBSTATIONS_SOURCE_ID, {
+            type: 'geojson',
+            data: osmPointsPath
+        });
+        map.addLayer({
+            id: OSM_SUBSTATIONS_LAYER_ID,
+            type: 'circle',
+            source: OSM_SUBSTATIONS_SOURCE_ID,
+            filter: ['!=', ['get', 'is_foreign'], true],
+            paint: {
+                'circle-radius': 4,
+                'circle-color': '#1e90ff',
+                'circle-opacity': 0.7,
+                'circle-stroke-color': '#ffffff',
+                'circle-stroke-width': 1
+            },
+            layout: { visibility: 'visible' }
+        });
+        // クリックで情報表示（名前/事業者程度）
+        map.on('click', OSM_SUBSTATIONS_LAYER_ID, (e) => {
+            if (e.features.length > 0) {
+                const p = e.features[0].properties || {};
+                const title = p['name:ja'] || p.name || '変電所';
+                const operator = p.operator || '';
+                const html = `
+                    <div style="font-family: sans-serif;">
+                        <h3 style="margin: 0 0 8px 0; color: #333;">${title}</h3>
+                        ${operator ? `<div style="font-size: 13px; color: #666;">事業者: ${operator}</div>` : ''}
+                    </div>
+                `;
+                new maplibregl.Popup().setLngLat(e.lngLat).setHTML(html).addTo(map);
+            }
+        });
+        map.on('mouseenter', OSM_SUBSTATIONS_LAYER_ID, () => { map.getCanvas().style.cursor = 'pointer'; });
+        map.on('mouseleave', OSM_SUBSTATIONS_LAYER_ID, () => { map.getCanvas().style.cursor = ''; });
+        console.log('[power-infra] OSM substation points layer added');
+    } catch (_) {
+        console.warn('[power-infra] OSM substation points not available yet');
+    }
+
     // 変電所敷地ポリゴン（OSM）
     try {
         // Prefer combined (OSM + synthetic) if exists
@@ -233,6 +280,7 @@ async function addPowerInfraLayer(map) {
             id: SUBSTATION_POLYGONS_FILL_ID,
             type: 'fill',
             source: SUBSTATION_POLYGONS_SOURCE_ID,
+            filter: ['!=', ['get', 'is_foreign'], true],
             paint: {
                 'fill-color': '#d5a6f5',
                 'fill-opacity': [
@@ -251,6 +299,7 @@ async function addPowerInfraLayer(map) {
             id: SUBSTATION_POLYGONS_OUTLINE_ID,
             type: 'line',
             source: SUBSTATION_POLYGONS_SOURCE_ID,
+            filter: ['!=', ['get', 'is_foreign'], true],
             paint: {
                 'line-color': '#8a2be2',
                 'line-width': 1.5
@@ -266,6 +315,7 @@ async function addPowerInfraLayer(map) {
                 id: SUBSTATION_POLYGONS_LABEL_ID,
                 type: 'symbol',
                 source: SUBSTATION_POLYGONS_SOURCE_ID,
+                filter: ['!=', ['get', 'is_foreign'], true],
                 // Show labels even when 'name' is missing (fallback to operator)
                 layout: {
                     'text-field': [
@@ -334,6 +384,9 @@ function togglePowerInfra() {
     }
     if (mapInstance.getLayer(SUBSTATION_POLYGONS_LABEL_ID)) {
         mapInstance.setLayoutProperty(SUBSTATION_POLYGONS_LABEL_ID, 'visibility', visibility);
+    }
+    if (mapInstance.getLayer(OSM_SUBSTATIONS_LAYER_ID)) {
+        mapInstance.setLayoutProperty(OSM_SUBSTATIONS_LAYER_ID, 'visibility', visibility);
     }
 
     console.log(`[power-infra] Visibility: ${visibility}`);
