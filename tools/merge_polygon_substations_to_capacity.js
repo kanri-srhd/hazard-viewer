@@ -6,6 +6,17 @@
 // Output:
 //   Overwrites data/power/capacity/tepco_substations_all_matched.json
 
+const fc = loadJSON(JAPAN_BOUNDARY_PATH);
+const JAPAN_GEOM = fc.features[0];   // ← MultiPolygon本体
+
+// ...
+
+// 国境判定
+const isInside = turf.booleanPointInPolygon(
+  turf.point([lon, lat]),
+  JAPAN_GEOM
+);
+
 import fs from 'fs';
 import path from 'path';
 import booleanPointInPolygon from '@turf/boolean-point-in-polygon';

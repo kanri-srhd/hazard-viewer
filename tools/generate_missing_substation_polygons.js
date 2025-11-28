@@ -1,20 +1,13 @@
-const BASE_POLYGON_PATH = path.resolve('data/power/osm/substation_polygons.geojson');
-const SUBSTATION_POINTS_PATH = path.resolve('data/power/osm/substations_points.geojson');
-const OUT_PATH = path.resolve('data/power/osm/substation_polygons_with_generated.geojson');
-import fs from 'fs';
 // tools/generate_missing_substation_polygons.js
 // Generate synthetic polygons for substations that lack OSM area polygons.
-// Strategy: For each substation point (TEPCO dataset) whose normalized name is not present
-// in existing OSM power=substation polygons, create a circular approximation buffered
-// by voltage class. Output merged FeatureCollection.
-// Usage:
-//   node tools/generate_missing_substation_polygons.js
-// Output:
-//   data/power/osm/substation_polygons_with_generated.geojson
 
-
-import * as turf from '@turf/turf';
+import fs from 'fs';
 import path from 'path';
+import * as turf from '@turf/turf';
+
+const BASE_POLYGON_PATH = path.resolve('data/power/osm/substation_polygons_filtered.geojson');
+const SUBSTATION_POINTS_PATH = path.resolve('data/power/osm/substations_points.geojson');
+const OUT_PATH = path.resolve('data/power/osm/substation_polygons_with_generated.geojson');
 
 const JAPAN_BOUNDARY_PATH = path.resolve('data/japan_boundary.geojson');
 
@@ -24,10 +17,11 @@ function isInJapan(lat, lon, japanGeometry) {
 
 function normalizeName(name) {
   if (!name) return '';
-  return name.replace(/変電所/g, '') // remove suffix
-             .replace(/[\s\u3000]/g, '') // remove whitespace (ASCII + full-width)
-             .replace(/[（）()]/g, '') // remove parens
-             .toLowerCase();
+  return name
+    .replace(/変電所/g, '')
+    .replace(/[\s\u3000]/g, '')
+    .replace(/[（）()]/g, '')
+    .toLowerCase();
 }
 
 function loadJSON(p) {
