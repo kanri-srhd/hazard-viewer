@@ -14,12 +14,12 @@ import { createLayerToggleUI, adjustPanelSize } from "./layers/ui.js";
 // ======================================================================
 
 const SVG_ICONS = {
-    search: `<svg width="24" height="24" ...></svg>`,
-    menu:`<svg width="24" height="24" ...></svg>`,
-    zoomIn:`<svg width="24" height="24" ...></svg>`,
-    zoomOut:`<svg width="24" height="24" ...></svg>`,
-    locate:`<svg width="24" height="24" ...></svg>`,
-    trash:`<svg width="24" height="24" ...></svg>`
+    search: img.src = "./icons/search.svg";,
+    menu: img.src = "./icons/menu.svg";,
+    zoomIn:img.src = "./icons/zoom_in.svg";,
+    zoomOut:img.src = "./icons/zoom_out.svg";,
+    locate:img.src = "./icons/locate.svg";,
+    trash:img.src = "./icons/trash.svg";
 };
 function svgToDataUri(svg) { return `data:image/svg+xml;base64,${btoa(svg)}`; }
 
