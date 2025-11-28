@@ -8,6 +8,11 @@
 
 import fs from 'fs';
 import path from 'path';
+import booleanPointInPolygon from '@turf/boolean-point-in-polygon';
+
+// Load Japan boundary GeoJSON
+const JAPAN_BOUNDARY_PATH = path.resolve('data/japan_boundary.geojson');
+const JAPAN_BOUNDARY = JSON.parse(fs.readFileSync(JAPAN_BOUNDARY_PATH, 'utf8'));
 
 const POLYGONS_PATH = path.resolve('data/power/osm/substation_polygons_with_generated.geojson');
 const CAPACITY_PATH = path.resolve('data/power/capacity/tepco_substations_all_matched.json');
@@ -79,11 +84,8 @@ function main() {
   console.log(`[merge] Existing capacity records: ${capacity.length}`);
   console.log(`[merge] Unique normalized names: ${existingNames.size}`);
 
-  // Add missing substations from polygons (Japan bbox only)
-  const JAPAN_BBOX = { minLat: 24.0, maxLat: 45.5, minLon: 123.0, maxLon: 148.0 };
-   let koreanNames = 0;
+
   let added = 0;
-  let outsideBbox = 0;
   for (const f of polygons.features) {
     const name = f.properties?.name;
     if (!name) continue;
@@ -93,17 +95,10 @@ function main() {
     const centroid = featureCentroid(f);
     if (!centroid) continue;
     const [lon, lat] = centroid;
-    
-    // Determine foreign flag instead of hard exclusion
-    let is_foreign = false;
-    if (!isInJapan(lat, lon, name)) {
-      is_foreign = true;
-      if (hasKoreanCharacters(name)) {
-        koreanNames++;
-      } else {
-        outsideBbox++;
-      }
-    }
+
+    // turfで日本境界判定
+    const pt = { type: 'Point', coordinates: [lon, lat] };
+    const is_foreign = !booleanPointInPolygon(pt, JAPAN_BOUNDARY);
 
     const voltage_kv = parseVoltageKv(f.properties);
     const newEntry = {
@@ -128,41 +123,9 @@ function main() {
   }
 
   console.log(`[merge] Added ${added} new entries from polygons`);
-  console.log(`[merge] Skipped ${outsideBbox} entries outside Japan bbox`);
-  console.log(`[merge] Skipped ${koreanNames} entries with Korean names`);
   console.log(`[merge] Total records: ${capacity.length}`);
   
-// Korean characters filter (Hangul)
-function hasKoreanCharacters(name) {
-  if (!name) return false;
-  return /[\uAC00-\uD7AF]/.test(name);
-}
 
-
-function hasCyrillicCharacters(name) {
-  if (!name) return false;
-  return /[\u0400-\u04FF]/.test(name);
-}
-
-function isInJapan(lat, lon, name) {
-  // Exclude foreign-language names (Korean/Chinese/Cyrillic)
-  if (hasKoreanCharacters(name) || hasCyrillicCharacters(name)) return false;
-  
-  // Basic bbox check
-  if (lat < JAPAN_BBOX.minLat || lat > JAPAN_BBOX.maxLat || 
-      lon < JAPAN_BBOX.minLon || lon > JAPAN_BBOX.maxLon) {
-    return false;
-  }
-  
-  // More strict filtering for areas near Korea
-  // Below 38°N, longitude must be > 128°E (excludes Korean peninsula)
-  if (lat < 38.0 && lon < 128.0) return false;
-  // Exclude Russian Far East regions (Primorsky, Sakhalin)
-  if (lon > 142 && lat > 44) return false;
-  if (lat > 43 && lon > 131 && lon < 142) return false;
-  
-  return true;
-}
   console.log(`[merge] Writing to ${CAPACITY_PATH}`);
   fs.writeFileSync(CAPACITY_PATH, JSON.stringify(capacity, null, 2), 'utf8');
   console.log('[merge] Done');

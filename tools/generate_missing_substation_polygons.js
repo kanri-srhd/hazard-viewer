@@ -1,3 +1,7 @@
+const BASE_POLYGON_PATH = path.resolve('data/power/osm/substation_polygons.geojson');
+const SUBSTATION_POINTS_PATH = path.resolve('data/power/osm/substations_points.geojson');
+const OUT_PATH = path.resolve('data/power/osm/substation_polygons_with_generated.geojson');
+import fs from 'fs';
 // tools/generate_missing_substation_polygons.js
 // Generate synthetic polygons for substations that lack OSM area polygons.
 // Strategy: For each substation point (TEPCO dataset) whose normalized name is not present
@@ -8,50 +12,14 @@
 // Output:
 //   data/power/osm/substation_polygons_with_generated.geojson
 
-import fs from 'fs';
+
+import * as turf from '@turf/turf';
 import path from 'path';
 
-const BASE_POLYGON_PATH = path.resolve('data/power/osm/substation_polygons.geojson');
-const SUBSTATION_POINTS_PATH = path.resolve('data/power/capacity/tepco_substations_all_matched.json');
-const OUT_PATH = path.resolve('data/power/osm/substation_polygons_with_generated.geojson');
+const JAPAN_BOUNDARY_PATH = path.resolve('data/japan_boundary.geojson');
 
-// Japan bbox filter
-const JAPAN_BBOX = {
-  minLat: 24.0,
-  maxLat: 45.5,
-  minLon: 123.0,
-  maxLon: 148.0
-};
-
-// Korean characters filter (Hangul)
-function hasKoreanCharacters(name) {
-  if (!name) return false;
-  return /[\uAC00-\uD7AF]/.test(name);
-}
-
-
-function hasCyrillicCharacters(name) {
-  if (!name) return false;
-  return /[\u0400-\u04FF]/.test(name);
-}
-
-function isInJapan(lat, lon, name) {
-  // Exclude foreign-language names (Korean/Chinese/Cyrillic)
-  if (hasKoreanCharacters(name) || hasCyrillicCharacters(name)) return false;
-  
-  // Basic bbox check
-  if (lat < JAPAN_BBOX.minLat || lat > JAPAN_BBOX.maxLat || 
-      lon < JAPAN_BBOX.minLon || lon > JAPAN_BBOX.maxLon) {
-    return false;
-  }
-  
-  // Exclude Korean peninsula (approx window)
-  if (lat >= 33.0 && lat <= 39.0 && lon >= 124.0 && lon < 128.0) return false;
-  // Exclude Russian Far East regions
-  if (lon > 142 && lat > 44) return false;
-  if (lat > 43 && lon > 131 && lon < 142) return false;
-  
-  return true;
+function isInJapan(lat, lon, japanGeometry) {
+  return turf.booleanPointInPolygon(turf.point([lon, lat]), japanGeometry);
 }
 
 function normalizeName(name) {
@@ -163,10 +131,14 @@ function circlePolygon(lon, lat, radiusMeters, segments = 24) {
   return coords;
 }
 
+
 function main() {
   console.log('[missing-polygons] Loading base polygons & substation points...');
   const base = loadJSON(BASE_POLYGON_PATH); // FeatureCollection
-  const points = loadJSON(SUBSTATION_POINTS_PATH); // array of objects
+  const pointsFC = loadJSON(SUBSTATION_POINTS_PATH); // FeatureCollection
+  const points = pointsFC.features || []; // array of features
+  const japanBoundary = JSON.parse(fs.readFileSync(JAPAN_BOUNDARY_PATH, 'utf8'));
+  const japanGeometry = japanBoundary.features[0].geometry;
 
   const existingNameSet = new Set();
   const areaStats = { 500: [], 275: [], 154: [], 66: [], 22: [], 6.6: [] };
@@ -197,22 +169,10 @@ function main() {
   const generatedFeatures = [];
   let skippedNoCoord = 0;
   let matchedExisting = 0;
-
-  let skippedBbox = 0;
-  let skippedKorean = 0;
+  let taggedForeign = 0;
   for (const s of points) {
     if (s.lat == null || s.lon == null) { skippedNoCoord++; continue; }
-    
-    // Skip if outside Japan bbox
-    if (!isInJapan(s.lat, s.lon, s.name)) {
-      if (hasKoreanCharacters(s.name)) {
-        skippedKorean++;
-      } else {
-        skippedBbox++;
-      }
-      continue;
-    }
-    
+    const isForeign = !isInJapan(s.lat, s.lon, japanGeometry);
     const norm = normalizeName(s.name || s.name_normalized);
     if (norm && existingNameSet.has(norm)) { matchedExisting++; continue; }
 
@@ -235,9 +195,11 @@ function main() {
         generation_method: 'radius_buffer',
         footprint_radius_m: rMeters,
         area_est_m2: Math.round(areaEst),
-        source: 'synthetic'
+        source: 'synthetic',
+        ...(isForeign ? { is_foreign: true } : {})
       }
     });
+    if (isForeign) taggedForeign++;
   }
 
   const merged = {
@@ -261,8 +223,7 @@ function main() {
   console.log(`[missing-polygons] Generated synthetic polygons: ${generatedFeatures.length}`);
   console.log(`[missing-polygons] Existing matched (skipped): ${matchedExisting}`);
   console.log(`[missing-polygons] Missing coords skipped: ${skippedNoCoord}`);
-  console.log(`[missing-polygons] Outside Japan bbox (skipped): ${skippedBbox}`);
-  console.log(`[missing-polygons] Korean names (skipped): ${skippedKorean}`);
+  console.log(`[missing-polygons] Foreign (is_foreign:true) tagged: ${taggedForeign}`);
   console.log('[missing-polygons] Output:', OUT_PATH);
 }
 

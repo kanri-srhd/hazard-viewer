@@ -98,120 +98,196 @@ async function addPowerInfraLayer(map) {
     mapInstance = map;
 
     const data = await loadInfrastructureData();
-    
-    // 変電所レイヤー（座標があるもののみ表示）
-    const substationGeoJSON = substationsToGeoJSON(data.substations);
-    
-    console.log(`[power-infra] Adding ${substationGeoJSON.features.length} substations to map`);
-    
-    if (substationGeoJSON.features.length > 0) {
-        map.addSource(SOURCE_ID, {
-            type: "geojson",
-            data: substationGeoJSON
-        });
+    // 国内のみフィルタ
+    const substationsDomestic = data.substations.filter(s => !s.is_foreign);
+    const substationGeoJSON = substationsToGeoJSON(substationsDomestic);
 
-        // 変電所ポイント（電圧で色分け）
+    // ポイントレイヤー（capacity_points）
+    map.addSource(SOURCE_ID, {
+        type: "geojson",
+        data: substationGeoJSON,
+        cluster: false,
+        promoteId: "id"
+    });
+    map.addLayer({
+        id: SUBSTATION_LAYER_ID,
+        type: "circle",
+        source: SOURCE_ID,
+        filter: ["!=", ["get", "is_foreign"], true],
+        paint: {
+            "circle-radius": 5,
+            "circle-color": [
+                "case",
+                ["==", ["get", "available_kw"], null], "#999999",
+                ["==", ["get", "available_kw"], 0], "#ff3333",
+                ["<=", ["get", "available_kw"], 500000], "#ff9900",
+                ["<=", ["get", "available_kw"], 2000000], "#ffe600",
+                [">", ["get", "available_kw"], 2000000], "#33cc33",
+                "#999999"
+            ],
+            "circle-opacity": 0.85,
+            "circle-stroke-color": "#fff",
+            "circle-stroke-width": 1.2
+        },
+        layout: { "visibility": "visible" }
+    });
+    // z-index: capacity_points > substation_points > polygons
+    map.moveLayer(SUBSTATION_LAYER_ID);
+
+    // ラベル（日本語優先、ズーム依存opacity）
+    const style = map.getStyle && map.getStyle();
+    const hasGlyphs = style && typeof style.glyphs === 'string' && style.glyphs.length > 0;
+    if (hasGlyphs) {
         map.addLayer({
-            id: SUBSTATION_LAYER_ID,
-            type: "circle",
+            id: SUBSTATION_LABEL_ID,
+            type: "symbol",
             source: SOURCE_ID,
-            paint: {
-                "circle-radius": [
-                    "case",
-                    ["==", ["typeof", ["get", "voltage_kv"]], "number"],
-                    [
-                        "interpolate",
-                        ["linear"],
-                        ["get", "voltage_kv"],
-                        6.6, 4,    // 低圧配電
-                        22, 6,     // 配電
-                        66, 8,     // 2次系統
-                        154, 10,   // 1次系統
-                        275, 12,   // 基幹系統
-                        500, 14    // 超高圧
-                    ],
-                    7  // voltage_kv が無い場合のデフォルト半径
-                ],
-                "circle-color": [
-                    "case",
-                    ["==", ["typeof", ["get", "voltage_kv"]], "number"],
-                    [
-                        "step",
-                        ["get", "voltage_kv"],
-                        "#ffd700", // 6.6kV - gold
-                        22, "#ff8c00",  // 22kV - dark orange
-                        66, "#ff4500",  // 66kV - orange red
-                        154, "#dc143c", // 154kV - crimson
-                        275, "#8b0000", // 275kV - dark red
-                        500, "#4b0082"  // 500kV - indigo
-                    ],
-                    "#999999" // voltage_kv が無い場合のデフォルト色（グレー）
-                ],
-                "circle-opacity": 0.8,
-                "circle-stroke-color": "#ffffff",
-                "circle-stroke-width": 1
-            },
+            filter: ["!=", ["get", "is_foreign"], true],
             layout: {
+                "text-field": ["coalesce", ["get", "name"], ["get", "name:ja"], ["get", "operator"]],
+                "text-size": 12,
+                "text-offset": [0, 1.2],
+                "text-anchor": "top",
                 "visibility": "visible"
+            },
+            paint: {
+                "text-color": "#333",
+                "text-halo-color": "#fff",
+                "text-halo-width": 2,
+                "text-opacity": [
+                    "interpolate", ["linear"], ["zoom"],
+                    10, 0,
+                    11, 0.5,
+                    14, 1
+                ]
             }
         });
-
-        // 変電所ラベル（glyphs未設定スタイルではスキップ）
-        const style = map.getStyle && map.getStyle();
-        const hasGlyphs = style && typeof style.glyphs === 'string' && style.glyphs.length > 0;
-        if (hasGlyphs) {
-            map.addLayer({
-                id: SUBSTATION_LABEL_ID,
-                type: "symbol",
-                source: SOURCE_ID,
-                layout: {
-                    "text-field": ["get", "name"],
-                    "text-size": 11,
-                    "text-offset": [0, 1.5],
-                    "text-anchor": "top",
-                    "visibility": "none"
-                },
-                paint: {
-                    "text-color": "#333333",
-                    "text-halo-color": "#ffffff",
-                    "text-halo-width": 2
-                }
-            });
-        } else {
-            console.warn('[power-infra] Skipping label layer: style.glyphs is not configured');
-        }
-        
-        // クリックイベント
-        map.on('click', SUBSTATION_LAYER_ID, (e) => {
-            if (e.features.length > 0) {
-                const props = e.features[0].properties;
-                const html = `
-                    <div style="font-family: sans-serif;">
-                        <h3 style="margin: 0 0 8px 0; color: #333;">${props.name}変電所</h3>
-                        <table style="font-size: 13px; border-collapse: collapse; width: 100%;">
-                            <tr><td style="padding: 4px 8px 4px 0; color: #666;">電圧階級:</td><td style="padding: 4px 0;">${props.voltage_kv} kV</td></tr>
-                            <tr><td style="padding: 4px 8px 4px 0; color: #666;">空き容量:</td><td style="padding: 4px 0;">${(props.available_kw / 1000).toLocaleString()} kW</td></tr>
-                            <tr><td style="padding: 4px 8px 4px 0; color: #666;">更新日:</td><td style="padding: 4px 0;">${props.updated_at}</td></tr>
-                            <tr><td style="padding: 4px 8px 4px 0; color: #666;">事業者:</td><td style="padding: 4px 0;">${props.utility}</td></tr>
-                            ${props.matched_source !== 'unmatched' ? `<tr><td style="padding: 4px 8px 4px 0; color: #666;">座標取得:</td><td style="padding: 4px 0;">${props.matched_source}</td></tr>` : ''}
-                        </table>
-                    </div>
-                `;
-                new maplibregl.Popup()
-                    .setLngLat(e.lngLat)
-                    .setHTML(html)
-                    .addTo(map);
-            }
-        });
-        
-        // ホバー時のカーソル変更
-        map.on('mouseenter', SUBSTATION_LAYER_ID, () => {
-            map.getCanvas().style.cursor = 'pointer';
-        });
-        map.on('mouseleave', SUBSTATION_LAYER_ID, () => {
-            map.getCanvas().style.cursor = '';
-        });
+        map.moveLayer(SUBSTATION_LABEL_ID);
     }
+
+    // クリックイベント（ポイント）
+    map.on('click', SUBSTATION_LAYER_ID, (e) => {
+        if (e.features.length > 0) {
+            const props = e.features[0].properties;
+            const html = `
+                <div style="font-family: sans-serif;">
+                    <h3 style="margin: 0 0 8px 0; color: #333;">${props.name || props["name:ja"] || props.operator}</h3>
+                    <table style="font-size: 13px; border-collapse: collapse; width: 100%;">
+                        <tr><td style="padding: 4px 8px 4px 0; color: #666;">空き容量:</td><td style="padding: 4px 0;">${props.available_kw !== null ? (props.available_kw / 1000).toLocaleString() + ' kW' : '不明'}</td></tr>
+                        <tr><td style="padding: 4px 8px 4px 0; color: #666;">電圧:</td><td style="padding: 4px 0;">${props.voltage_kv || '不明'} kV</td></tr>
+                        <tr><td style="padding: 4px 8px 4px 0; color: #666;">事業者:</td><td style="padding: 4px 0;">${props.utility || ''}</td></tr>
+                    </table>
+                </div>
+            `;
+            new maplibregl.Popup().setLngLat(e.lngLat).setHTML(html).addTo(map);
+        }
+    });
+    map.on('mouseenter', SUBSTATION_LAYER_ID, () => { map.getCanvas().style.cursor = 'pointer'; });
+    map.on('mouseleave', SUBSTATION_LAYER_ID, () => { map.getCanvas().style.cursor = ''; });
+
+    // 敷地ポリゴン（fill + outline, 国内のみ）
+    const polygonsPath = resolveDataPath('power/osm/substation_polygons_with_generated.geojson');
+    const polygonsResp = await fetch(polygonsPath);
+    const polygonsGeoJSON = await polygonsResp.json();
+    const polygonsDomestic = polygonsGeoJSON.features.filter(f => !f.properties.is_foreign);
+    const polygonsFiltered = { type: 'FeatureCollection', features: polygonsDomestic };
+    map.addSource(SUBSTATION_POLYGONS_SOURCE_ID, {
+        type: 'geojson',
+        data: polygonsFiltered,
+        cluster: false,
+        promoteId: 'id'
+    });
+    // fill layer
+    map.addLayer({
+        id: SUBSTATION_POLYGONS_FILL_ID,
+        type: 'fill',
+        source: SUBSTATION_POLYGONS_SOURCE_ID,
+        filter: ["!=", ["get", "is_foreign"], true],
+        paint: {
+            'fill-color': [
+                'case',
+                ['==', ['get', 'synthetic'], true], '#c7b5ff',
+                '#b08cff'
+            ],
+            'fill-opacity': 0.32
+        },
+        layout: { 'visibility': 'visible' }
+    });
+    map.moveLayer(SUBSTATION_POLYGONS_FILL_ID, SUBSTATION_LAYER_ID);
+    // outline layer
+    map.addLayer({
+        id: SUBSTATION_POLYGONS_OUTLINE_ID,
+        type: 'line',
+        source: SUBSTATION_POLYGONS_SOURCE_ID,
+        filter: ["!=", ["get", "is_foreign"], true],
+        paint: {
+            'line-color': '#5e3bb0',
+            'line-width': 1.2
+        },
+        layout: { 'visibility': 'visible' }
+    });
+    map.moveLayer(SUBSTATION_POLYGONS_OUTLINE_ID, SUBSTATION_POLYGONS_FILL_ID);
+
+    // ポリゴンラベル
+    if (hasGlyphs) {
+        map.addLayer({
+            id: SUBSTATION_POLYGONS_LABEL_ID,
+            type: 'symbol',
+            source: SUBSTATION_POLYGONS_SOURCE_ID,
+            filter: ["!=", ["get", "is_foreign"], true],
+            layout: {
+                'text-field': [
+                    'coalesce',
+                    ['get', 'name'],
+                    ['get', 'name:ja'],
+                    ['get', 'operator'],
+                    ''
+                ],
+                'text-size': [
+                    'interpolate', ['linear'], ['zoom'],
+                    6, 11,
+                    10, 13,
+                    14, 16
+                ],
+                'symbol-placement': 'point',
+                'text-padding': 2,
+                'text-max-width': 12,
+                'text-allow-overlap': false,
+                'visibility': 'visible'
+            },
+            paint: {
+                'text-color': '#4b0082',
+                'text-halo-color': '#fff',
+                'text-halo-width': 1.5,
+                'text-opacity': [
+                    'interpolate', ['linear'], ['zoom'],
+                    10, ['step', ['coalesce', ['get', 'area_est_m2'], 0], 0.0, 3000, 1.0],
+                    12, ['step', ['coalesce', ['get', 'area_est_m2'], 0], 0.0, 1000, 1.0],
+                    14, ['step', ['coalesce', ['get', 'area_est_m2'], 0], 0.0, 200, 1.0]
+                ]
+            }
+        });
+        map.moveLayer(SUBSTATION_POLYGONS_LABEL_ID, SUBSTATION_POLYGONS_OUTLINE_ID);
+    }
+    // ポリゴン上クリック
+    map.on('click', SUBSTATION_POLYGONS_FILL_ID, (e) => {
+        if (e.features.length > 0) {
+            const p = e.features[0].properties;
+            const title = p['name:ja'] || p.name || p.operator || '変電所';
+            const html = `
+                <div style="font-family: sans-serif;">
+                    <h3 style="margin: 0 0 8px 0; color: #333;">${title}</h3>
+                    <div style="font-size: 13px; color: #666;">事業者: ${p.operator || ''}</div>
+                </div>
+            `;
+            new maplibregl.Popup().setLngLat(e.lngLat).setHTML(html).addTo(map);
+        }
+    });
+    map.on('mouseenter', SUBSTATION_POLYGONS_FILL_ID, () => { map.getCanvas().style.cursor = 'pointer'; });
+    map.on('mouseleave', SUBSTATION_POLYGONS_FILL_ID, () => { map.getCanvas().style.cursor = ''; });
+
+    layerAdded = true;
+    console.log('[power-infra] Layer added');
 
     // OSM変電所ポイント（補完用）
     try {
