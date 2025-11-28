@@ -22,7 +22,7 @@ const SUBSTATION_POLYGONS_OUTLINE_ID = "power-substation-polygons-outline";
 const SUBSTATION_POLYGONS_LABEL_ID = "power-substation-polygons-label";
 
 // ============================================
-// capacityデータロード
+// 全国版 capacity → GeoJSON FeatureCollection をロード
 // ============================================
 async function loadInfrastructureData() {
     const url = resolveDataPath("power/capacity/national_substations_all.geojson");
@@ -34,13 +34,11 @@ async function loadInfrastructureData() {
             throw new Error("national_substations_all.geojson is not a FeatureCollection");
         }
 
-        const features = fc.features;
+        console.log(`[power-infra] Loaded national substation points: ${fc.features.length}`);
 
-        console.log(`[power-infra] Loaded national substation points: ${features.length}`);
-        
         return {
-            substations: features,   // ← features配列
-            all: features,
+            substations: fc.features,
+            all: fc.features,
             transmissionLines: []
         };
     } catch (err) {
@@ -50,18 +48,17 @@ async function loadInfrastructureData() {
 }
 
 // ============================================
-// capacity → GeoJSON Points
+// Feature[] → GeoJSON Points FC
 // ============================================
 function substationsToGeoJSON(arr) {
     return {
         type: "FeatureCollection",
         features: arr
-            // national_substations_all.geojson は Feature の配列なので geometry を見る
-            .filter(e => e.geometry && e.geometry.type === "Point" && e.geometry.coordinates)
+            .filter(e => e.geometry && e.geometry.type === "Point")
             .map(e => ({
                 type: "Feature",
-                geometry: e.geometry,          // centroid そのまま
-                properties: { ...e.properties } // properties もそのまま
+                geometry: e.geometry,
+                properties: { ...e.properties }
             }))
     };
 }
@@ -77,7 +74,6 @@ async function addPowerInfraLayer(map) {
     const infra = await loadInfrastructureData();
     infrastructureData = infra;
 
-    // 国内のみ
     const domestic = infra.substations.filter(s => !s.is_foreign);
     const pointFC = substationsToGeoJSON(domestic);
 
@@ -89,36 +85,29 @@ async function addPowerInfraLayer(map) {
         promoteId: "id"
     });
 
-map.addLayer({
-    id: SUBSTATION_LAYER_ID,
-    type: "circle",
-    source: SOURCE_ID,
-    paint: {
-        "circle-radius": 5,
-        "circle-color": [
-            "case",
-            // まず null の場合を先に明示してしまう
-            ["==", ["coalesce", ["get", "available_kw"], -1], -1], "#999999",
+    map.addLayer({
+        id: SUBSTATION_LAYER_ID,
+        type: "circle",
+        source: SOURCE_ID,
+        paint: {
+            "circle-radius": 5,
+            "circle-color": [
+                "case",
+                ["==", ["coalesce", ["get", "available_kw"], -1], -1], "#999999",
+                ["==", ["get", "available_kw"], 0], "#ff3333",
+                ["<=", ["get", "available_kw"], 500000], "#ff9900",
+                ["<=", ["get", "available_kw"], 2000000], "#ffe600",
+                [">", ["get", "available_kw"], 2000000], "#33cc33",
+                "#999999"
+            ],
+            "circle-opacity": 0.9,
+            "circle-stroke-color": "#fff",
+            "circle-stroke-width": 1.4
+        },
+        layout: { visibility: "visible" }
+    });
 
-            // null 以外は必ず数値なので safe
-            ["==", ["get", "available_kw"], 0], "#ff3333",
-            ["<=", ["get", "available_kw"], 500000], "#ff9900",
-            ["<=", ["get", "available_kw"], 2000000], "#ffe600",
-            [">", ["get", "available_kw"], 2000000], "#33cc33",
-
-            "#999999" // fallback
-        ],
-        "circle-opacity": 0.9,
-        "circle-stroke-color": "#fff",
-        "circle-stroke-width": 1.4
-    },
-    layout: {
-        visibility: "visible"
-    }
-});
-
-
-    // ------ point labels ------
+    // ------ label ------
     const style = map.getStyle && map.getStyle();
     const hasGlyphs = style && typeof style.glyphs === "string" && style.glyphs.length > 0;
 
@@ -216,6 +205,76 @@ map.addLayer({
             }
         });
     }
+
+    // ====================================
+    // ★ ポイントのポップアップ ★
+    // ====================================
+    map.on('click', SUBSTATION_LAYER_ID, (e) => {
+        if (!e.features.length) return;
+
+        const p = e.features[0].properties;
+
+        const name =
+            p["name:ja"] ||
+            p.name ||
+            p.operator ||
+            "変電所";
+
+        const voltage =
+            p.voltage_kv ||
+            p.voltage_kv_numeric ||
+            p.voltage ||
+            "不明";
+
+        const available =
+            p.available_kw == null
+                ? "不明"
+                : `${(p.available_kw).toLocaleString()} kW`;
+
+        const updated =
+            p.updated_at || "不明";
+
+        const utility =
+            p.utility ||
+            p.operator ||
+            "Unknown";
+
+        const html = `
+            <div style="font-family: sans-serif; font-size: 13px;">
+                <h3 style="margin: 0 0 8px 0; color: #333;">${name}</h3>
+                <table style="width: 100%; border-collapse: collapse;">
+                    <tr>
+                        <td style="padding: 4px 6px; color:#666;">空き容量</td>
+                        <td>${available}</td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 4px 6px; color:#666;">電圧階級</td>
+                        <td>${voltage} kV</td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 4px 6px; color:#666;">事業者</td>
+                        <td>${utility}</td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 4px 6px; color:#666;">更新日</td>
+                        <td>${updated}</td>
+                    </tr>
+                </table>
+            </div>
+        `;
+
+        new maplibregl.Popup({ offset: 25 })
+            .setLngLat(e.lngLat)
+            .setHTML(html)
+            .addTo(map);
+    });
+
+    map.on('mouseenter', SUBSTATION_LAYER_ID, () => {
+        map.getCanvas().style.cursor = 'pointer';
+    });
+    map.on('mouseleave', SUBSTATION_LAYER_ID, () => {
+        map.getCanvas().style.cursor = '';
+    });
 
     layerAdded = true;
     console.log("[power-infra] Layer added (base polygons + capacity points)");
