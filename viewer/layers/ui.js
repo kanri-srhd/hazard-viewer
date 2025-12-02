@@ -327,7 +327,7 @@ function createPowerSection(panel, map) {
     items.push({
         id: "power_infrastructure",
         icon: "🔌",
-        label: "電力インフラ（変電所）",
+        label: "変電所",
         layerId: "power-substation-layer",
         toggle: (checked) => {
             if (window.PowerInfraLayer) {
