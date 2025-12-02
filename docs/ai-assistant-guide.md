@@ -1,4 +1,3 @@
-```md
 # AI Assistant Guide  
 **（AIアシスタント向け補助ドキュメント / Version 0.1）**
 
