@@ -23,6 +23,7 @@ venv/
 venv310/
 env/
 .venv/
+venv*/
 
 # Logs
 *.log
