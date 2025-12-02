@@ -18,6 +18,12 @@ dist/
 out/
 tmp/
 
+# Python virtual environments
+venv/
+venv310/
+env/
+.venv/
+
 # Logs
 *.log
 
