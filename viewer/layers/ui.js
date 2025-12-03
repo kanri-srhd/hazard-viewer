@@ -9,8 +9,7 @@
 // - 透明度スライダー
 // - レスポンシブ自動判定
 // - カテゴリー順序: 地番 → ハザード → 電力 → 地図
-// - ハザードレイヤーは hazardMatrix.js から自動生成
-// - Google Maps風SVGアイコンセット
+// - ハザードレイヤーは hazardMatrix.js から自動生成（GSI公式IDベース）
 // ======================================================================
 
 import { hazardMatrix } from "../../data/hazardMatrix.js";
@@ -27,11 +26,11 @@ let isMobile = false;
 // ======================================================================
 
 const SVG_ICONS = {
-    menu: `<svg width="24" height="24" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+    menu: `<svg width="24" height="24" viewBox="0 0 24 24" xmlns="http://www.w3.org/200/svg">
         <path d="M4 7h16M4 12h16M4 17h16" stroke="#5f6368" stroke-width="2" stroke-linecap="round" fill="none"/>
     </svg>`,
     
-    chevronDown: `<svg width="24" height="24" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+    chevronDown: `<svg width="24" height="24" viewBox="0 0 24 24" xmlns="http://www.w3.org/200/svg">
         <path d="M6 9l6 6 6-6" stroke="#5f6368" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
     </svg>`,
     
@@ -40,7 +39,7 @@ const SVG_ICONS = {
         <path d="M2 17l10 5 10-5M2 12l10 5 10-5" stroke="#5f6368" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
     </svg>`,
     
-    close: `<svg width="24" height="24" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+    close: `<svg width="24" height="24" viewBox="0 0 24 24" xmlns="http://www.w3.org/200/svg">
         <path d="M18 6L6 18M6 6l12 12" stroke="#5f6368" stroke-width="2" stroke-linecap="round" fill="none"/>
     </svg>`
 };
@@ -217,87 +216,73 @@ function chooseIconByHazardGroup(hazardGroup, layerId) {
             return "🌊";
         case "storm_surge":
             return "🌀";
-        case "liquefaction":
+        case "external":
             return "🏗";
-        case "earthquake":
-            return "🏚";
         default:
-            if (layerId === "road_kansui") return "🚧";
             return "🌐";
     }
 }
 
 /**
  * ハザードセクション（第2カテゴリー）- hazardMatrix から自動生成
- * 全8レイヤーをカテゴリ別に表示
+ * hazardMatrix.js に登録されている全ハザードレイヤーをカテゴリ別に表示
  */
 function createHazardSection(panel, map, callbacks) {
-    // UIに表示する8レイヤー
-    const TARGET_LAYERS = new Set([
-        "flood_l2_shinsuishin",
-        "flood_keikaku",
-        "sediment_keikai",
-        "tsunami_newlegend",
-        "takashio_soutei",
-        "mlit_liquefaction",
-        "jishin_kyouka",
-        "road_kansui"
-    ]);
-
     // カテゴリ別配列
     const flood = [];
     const landslide = [];
     const coastal = [];
     const ground = [];
-    const access = [];
 
-    // hazardMatrix から対象レイヤーを抽出してカテゴリ分け
+    // hazardMatrix からレイヤーを抽出してカテゴリ分け
     for (const [layerId, config] of Object.entries(hazardMatrix)) {
-        if (!TARGET_LAYERS.has(layerId)) continue;
-
         const meta = config.metadata || {};
         const hazardGroup = meta.hazardGroup;
         const icon = chooseIconByHazardGroup(hazardGroup, layerId);
 
+        // MLIT液状化など、外部APIも含める
         const item = {
             id: layerId,
             icon: icon,
             label: config.title,
             layerId: layerId,
+            // ✅ 全レイヤー初期OFF：defaultCheckedは指定しない
             toggle: (checked) => toggleHazard(layerId, checked)
         };
 
-        // hazardGroup に基づいてカテゴリ分け
         if (hazardGroup === "flood") {
             flood.push(item);
         } else if (hazardGroup === "landslide") {
             landslide.push(item);
         } else if (hazardGroup === "tsunami" || hazardGroup === "storm_surge") {
             coastal.push(item);
-        } else if (hazardGroup === "liquefaction" || hazardGroup === "earthquake") {
+        } else if (hazardGroup === "external") {
             ground.push(item);
-        } else if (layerId === "road_kansui") {
-            access.push(item);
         } else {
-            console.warn(`[ui] Unhandled layer: ${layerId} (group: ${hazardGroup})`);
+            console.warn(`[ui] Unhandled hazard layer: ${layerId} (group: ${hazardGroup})`);
         }
     }
 
-    // カテゴリごとにセクション作成（順序固定: 洪水 → 土砂 → 津波・高潮 → 地盤・地震 → 道路冠水）
+    // 一応ソート（タイトル順）
+    const byTitle = (a, b) => a.label.localeCompare(b.label, "ja");
+
+    flood.sort(byTitle);
+    landslide.sort(byTitle);
+    coastal.sort(byTitle);
+    ground.sort(byTitle);
+
+    // カテゴリごとにセクション作成（順序固定: 洪水 → 土砂 → 津波・高潮 → 地盤・液状化）
     if (flood.length > 0) {
-        panel.appendChild(createSection("💧 洪水", flood, map, true));
+        panel.appendChild(createSection("💧 洪水・内水", flood, map, true));
     }
     if (landslide.length > 0) {
-        panel.appendChild(createSection("⛰ 土砂", landslide, map, true));
+        panel.appendChild(createSection("⛰ 土砂・雪崩", landslide, map, true));
     }
     if (coastal.length > 0) {
         panel.appendChild(createSection("🌊 津波・高潮", coastal, map, true));
     }
     if (ground.length > 0) {
-        panel.appendChild(createSection("🛟 地盤・地震", ground, map, true));
-    }
-    if (access.length > 0) {
-        panel.appendChild(createSection("🚧 道路冠水", access, map, true));
+        panel.appendChild(createSection("🏗 液状化・外部API", ground, map, true));
     }
 }
 
@@ -337,7 +322,9 @@ function createPowerSection(panel, map) {
                 if (checked) {
                     const stats = window.PowerInfraLayer.getStats();
                     if (stats) {
-                        console.log(`[power-infra] Total: ${stats.total}, With coords: ${stats.withCoords} (${stats.coordsPercentage}%)`);
+                        console.log(
+                          `[power-infra] Total: ${stats.total}, With coords: ${stats.withCoords} (${stats.coordsPercentage}%)`
+                        );
                     }
                 }
             }
@@ -352,7 +339,7 @@ function createPowerSection(panel, map) {
         layerId: "powerlines-osm-lines",
         defaultChecked: true,
         toggle: (checked) => {
-            if (typeof togglePowerlineLayer !== 'undefined') {
+            if (typeof togglePowerlineLayer !== "undefined") {
                 togglePowerlineLayer(map, checked);
             }
         }
@@ -453,6 +440,7 @@ function createLayerItem(item, map, hasOpacity) {
     const checkbox = document.createElement("input");
     checkbox.type = "checkbox";
     checkbox.id = `chk-${item.id}`;
+    // ✅ 全レイヤー初期OFF（defaultCheckedがtrueのものだけON）
     checkbox.checked = item.defaultChecked || false;
 
     const label = document.createElement("label");

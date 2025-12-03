@@ -107,6 +107,163 @@ GSI の Identifier のみ使用。
 
 ---
 
+## 🧩 **アーキテクチャ依存ルール（AI 必読 / Segment4）**
+
+このプロジェクトでは、
+AI が誤った依存方向のコードを生成しないよう、
+**明確な依存関係マップ（Allowed / Forbidden）を定義** しています。
+
+---
+
+### 🔷 **詳細アーキテクチャ図（Mermaid：AI向け厳密版）**
+
+```mermaid
+flowchart TD
+
+    subgraph UI_Layer["UI Layer"]
+        UI_map["map-init.js"]
+        UI_panel["ui-init.js"]
+    end
+
+    subgraph EventBus["DataBus（イベントハブ）"]
+        DB_select["parcel/select"]
+        DB_loaded["parcel/loaded"]
+        DB_hReq["hazard/request"]
+        DB_hUpd["hazard/updated"]
+        DB_cReq["capacity/request"]
+        DB_cUpd["capacity/updated"]
+        DB_snap["unified/snapshot-updated"]
+    end
+
+    subgraph UnifiedLayer["Unified Data Layer"]
+        UDL_core["unified-layer.js<br/>（Parcel/Hazard/Capacity を統合）"]
+    end
+
+    subgraph Engines["Engines"]
+        Eng_parcel["parcel-loader.js"]
+        Eng_hazard["hazard-engine.js"]
+        Eng_capacity["capacity-engine.js"]
+    end
+
+    subgraph Storage["Storage Layer"]
+        Store_sites["sites store"]
+        Store_hazard["hazardCache"]
+        Store_capacity["capacityCache"]
+    end
+
+    subgraph External["External Data Sources"]
+        Ext_gsi["GSI WMTS"]
+        Ext_cap["空容量 JSON / CSV（逆潮流）"]
+        Ext_osm["OSM 送電線・変電所"]
+        Ext_pm["PMTiles 地番"]
+    end
+
+    %% Allowed dependencies
+    UI_map --> DB_select
+    UI_panel --> DB_select
+
+    DB_select --> UDL_core
+
+    UDL_core --> DB_hReq
+    UDL_core --> DB_cReq
+
+    DB_hReq --> Eng_hazard
+    Eng_hazard --> DB_hUpd
+
+    DB_cReq --> Eng_capacity
+    Eng_capacity --> DB_cUpd
+
+    Eng_parcel --> DB_loaded
+
+    DB_loaded --> UDL_core
+    DB_hUpd --> UDL_core
+    DB_cUpd --> UDL_core
+
+    UDL_core --> DB_snap
+    UDL_core --> Storage
+
+    Eng_hazard --> Ext_gsi
+    Eng_capacity --> Ext_cap
+    Eng_parcel --> Ext_pm
+    Eng_capacity --> Ext_osm
+
+    %% Forbidden dependencies for AI
+    UI_map -.X.-> Engines
+    UI_panel -.X.-> Engines
+    Engines -.X.-> UI_panel
+    Engines -.X.-> Storage
+    Storage -.X.-> Engines
+    UI_panel -.X.-> External
+    UDL_core -.X.-> UI_panel
+```
+
+---
+
+### 🔶 **ASCII 依存境界図（AIが誤解しないための冗長版）**
+
+```txt
+=========================================================
+SRHD Hazard Viewer - Dependency Structure (AI Strict Mode)
+=========================================================
+
+UI LAYER (viewer/ui-init.js, viewer/map-init.js)
+    |
+    v
+DATA BUS (EventEmitter)
+    |
+    v
+UNIFIED DATA LAYER (viewer/unified/unified-layer.js)
+    |
+    +--> hazard/request
+    +--> capacity/request
+    |
+    v
+ENGINES (viewer/engines/*.js)
+    |
+    v
+EXTERNAL DATA SOURCES
+    - GSI WMTS  (metadata_light.xml)
+    - 空容量 JSON / CSV（逆潮流）
+    - OSM 送電線・変電所
+    - PMTiles 地番
+    |
+    ^
+    |
+STORAGE LAYER (IndexedDB: sites / hazardCache / capacityCache)
+    <-- write/read ONLY via UnifiedLayer
+
+---------------------------------------------------------
+Forbidden (AI must NEVER generate):
+---------------------------------------------------------
+UI        -> Engines
+Engines   -> UI
+Engines   -> Storage
+Storage   -> Engines
+UI        -> External
+UDL       -> UI
+---------------------------------------------------------
+Allowed:
+UI -> DataBus -> UDL -> Engines -> External
+UDL -> Storage
+=========================================================
+```
+
+---
+
+## 🧠 **AIが遵守すべきルール（追加版）**
+
+1. **UnifiedLayer を中心とする依存方向を絶対に乱さないこと**
+2. **UI から Engine を呼ぶコードを生成するのは禁止**
+3. **Engine が Storage を直接操作してはいけない**
+4. **Storage（IndexedDB）は UnifiedLayer 経由でのみアクセス可能**
+5. **EventBus のイベント名を勝手に作らない／改変しないこと**
+6. **UDL スキーマ（UnifiedSiteSnapshot）を勝手に変更しないこと**
+7. **GSI レイヤー識別子は metadata_light.xml の公式値のみ使用すること**
+8. **空容量は“逆潮流側”と明記されたもののみを扱う（誤補完禁止）**
+
+---
+
+
 # 5. よくあるタスクとテンプレート
 
 ## 5.1 hazardMatrix.js の更新依頼テンプレ
