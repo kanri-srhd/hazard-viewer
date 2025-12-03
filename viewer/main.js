@@ -32,9 +32,10 @@ document.addEventListener("DOMContentLoaded", () => {
         // window.hazardController = hazardController;
         // window.powerController = powerController;
     });
-});
+
 
     // 必要に応じてデバッグ用に window に expose
     // window.hazardController = hazardController;
     // window.powerController = powerController;
 
+});
