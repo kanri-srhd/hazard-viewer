@@ -262,7 +262,125 @@ UDL -> Storage
 8. **空容量は“逆潮流側”と明記されたもののみを扱う（誤補完禁止）**
 
 ---
+## 🔥 AI向け：レイヤー／ファイル責務の厳密定義（破ったらバグ確定）
 
+---
+
+# 1. UI Layer（viewer/ui-init.js / viewer/map-init.js）
+
+### Allowed（許可）
+
+* DataBus にイベント発火
+* snapshot-updated を購読
+* 地図・UI・パネル操作
+
+### Forbidden（禁止）
+
+* `import hazard-engine.js` → ❌
+* `import capacity-engine.js` → ❌
+* `import unified-layer.js` → ❌
+
+### 理由
+
+UI と Engine が依存すると**循環依存**が発生し、Viewer が壊れる。
+
+---
+
+# 2. DataBus（viewer/bus.js）
+
+### Allowed
+
+* イベントの送受信のみ
+* ロジック不可
+
+### Forbidden
+
+* 計算ロジック
+* 複雑な状態保持
+  ※ DataBus は “電文配達係” であり、頭脳ではない。
+
+---
+
+# 3. Unified Data Layer（viewer/unified/unified-layer.js）
+
+### Allowed
+
+* Parcel / Hazard / Capacity の統合
+* IndexedDB への保存・読込
+* Engine への要求（hazard/request など）
+
+### Forbidden
+
+* UI 更新
+* 地図操作
+* 外部 API の直接アクセス
+* Engine のロジックを取り込む
+* hazard-engine.js や capacity-engine.js の責務を奪う
+
+### Must Have
+
+* `UnifiedSiteSnapshot` を壊さない
+* dataDate チェック
+* snapshot-updated の発行
+
+---
+
+# 4. Engines（viewer/engines/*.js）
+
+### Allowed
+
+* ハザード判定
+* 空容量判定
+* 外部データ取得（WMTS / JSON / PMTiles）
+
+### Forbidden
+
+* UI 更新
+* IndexedDB アクセス
+* 他 Engine を直接呼ぶ
+* UnifiedLayer のロジックを取り込む
+
+---
+
+# 5. Storage Layer（viewer/storage/indexeddb.js）
+
+### Allowed
+
+* UDL からの save/get の指示を処理
+
+### Forbidden
+
+* UI と直接通信
+* Engine から直接触ること
+
+---
+
+# 6. External Data Sources
+
+AI は以下を守ること：
+
+* GSIレイヤーIDは metadata_light.xml の公式値のみ使用する
+* 空容量データは “逆潮流側” のみ扱う
+* 電力会社凡例の再解釈禁止
+* 農地データの地目分類を勝手に創作しない
+
+---
+
+# 🔒 グローバル禁止事項（AIルール）
+
+```txt
+UI        -> Engine        禁止
+Engine    -> UI            禁止
+Engine    -> Storage       禁止
+Storage   -> Engine        禁止
+UI        -> External      禁止
+UDL       -> UI            禁止
+
+Allowed:
+UI -> DataBus -> UDL -> Engine -> External
+UDL -> Storage
+```
+---
 
 # 5. よくあるタスクとテンプレート
 
@@ -330,5 +448,3 @@ AI アシスタントは、回答する際に **“今どのフェーズのタ�
 **以上が AI アシスタント向け補助ドキュメントの初期版です。**  
 今後のフェーズ進行に合わせてバージョンアップする。
 ```
-
----
