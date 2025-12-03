@@ -1,14 +1,285 @@
-// ======================================================================
-// power-init.js - 電力インフラ（変電所・送電線）
-// ======================================================================
+// viewer/power-init.js
+// ======================================================
+// OSM送電線・変電所レイヤー 初期化（全国フル実装）
+// ======================================================
 
-import { addPowerlineLayer } from "./layers/powerline.js";
-import { PowerInfraLayer } from "./layers/power_infrastructure.js";
+export const POWER_SOURCES = {
+  LINES: "osm-power-lines",
+  SUBSTATIONS: "osm-substations-points",
+};
 
-export function initPower(map) {
-    PowerInfraLayer.add(map).catch(err => {
-        console.error("[power-init] Failed to initialize power infrastructure:", err);
-    });
+export const POWER_LAYERS = {
+  LINE_500: "power-line-500kv",
+  LINE_275: "power-line-275kv",
+  LINE_154: "power-line-154kv",
+  LINE_OTHER: "power-line-other",
+  SUBSTATION: "power-substations",
+};
 
-    addPowerlineLayer(map);
+// 実データのパス（今回のPhaseX用に固定）
+const POWER_DATA_URLS = {
+  LINES: "data/power/osm/powerlines_osm.geojson",
+  SUBSTATIONS: "data/power/osm/substations_points.geojson",
+};
+
+/**
+ * 電力レイヤー（送電線・変電所）を初期化する
+ * @param {import("maplibre-gl").Map} map
+ * @returns {{
+ *   setVisibility: (key: string, visible: boolean) => void,
+ *   getState: () => any,
+ *   showAll: () => void,
+ *   hideAll: () => void,
+ *   layers: typeof POWER_LAYERS,
+ *   sources: typeof POWER_SOURCES,
+ * }}
+ */
+export function initPowerLayers(map) {
+  const state = {
+    line_500kv: false,
+    line_275kv: false,
+    line_154kv: false,
+    line_other: false,
+    substations: false,
+  };
+
+  function addSources() {
+    if (!map.getSource(POWER_SOURCES.LINES)) {
+      map.addSource(POWER_SOURCES.LINES, {
+        type: "geojson",
+        data: POWER_DATA_URLS.LINES,
+      });
+    }
+
+    if (!map.getSource(POWER_SOURCES.SUBSTATIONS)) {
+      map.addSource(POWER_SOURCES.SUBSTATIONS, {
+        type: "geojson",
+        data: POWER_DATA_URLS.SUBSTATIONS,
+      });
+    }
+  }
+
+  function addLineLayers() {
+    // 500kV
+    if (!map.getLayer(POWER_LAYERS.LINE_500)) {
+      map.addLayer({
+        id: POWER_LAYERS.LINE_500,
+        type: "line",
+        source: POWER_SOURCES.LINES,
+        minzoom: 3, // 全国ザックリ見えるように広域から表示
+        maxzoom: 22,
+        layout: {
+          visibility: "none",
+        },
+        paint: {
+          "line-color": "#ff0000",
+          "line-width": [
+            "interpolate",
+            ["linear"],
+            ["zoom"],
+            3, 1.2,
+            8, 2.5,
+            12, 3.5,
+            14, 4.5,
+          ],
+        },
+        filter: [
+          "all",
+          ["has", "voltage_numeric"],
+          [">=", ["get", "voltage_numeric"], 400000],
+        ],
+      });
+    }
+
+    // 275kV
+    if (!map.getLayer(POWER_LAYERS.LINE_275)) {
+      map.addLayer({
+        id: POWER_LAYERS.LINE_275,
+        type: "line",
+        source: POWER_SOURCES.LINES,
+        minzoom: 4,
+        maxzoom: 22,
+        layout: {
+          visibility: "none",
+        },
+        paint: {
+          "line-color": "#ff7f00",
+          "line-width": [
+            "interpolate",
+            ["linear"],
+            ["zoom"],
+            4, 1.0,
+            8, 2.0,
+            12, 3.0,
+            14, 4.0,
+          ],
+        },
+        filter: [
+          "all",
+          ["has", "voltage_numeric"],
+          [">=", ["get", "voltage_numeric"], 200000],
+          ["<", ["get", "voltage_numeric"], 400000],
+        ],
+      });
+    }
+
+    // 154kV
+    if (!map.getLayer(POWER_LAYERS.LINE_154)) {
+      map.addLayer({
+        id: POWER_LAYERS.LINE_154,
+        type: "line",
+        source: POWER_SOURCES.LINES,
+        minzoom: 5,
+        maxzoom: 22,
+        layout: {
+          visibility: "none",
+        },
+        paint: {
+          "line-color": "#ffff00",
+          "line-width": [
+            "interpolate",
+            ["linear"],
+            ["zoom"],
+            5, 0.8,
+            9, 1.6,
+            13, 2.6,
+          ],
+        },
+        filter: [
+          "all",
+          ["has", "voltage_numeric"],
+          [">=", ["get", "voltage_numeric"], 140000],
+          ["<", ["get", "voltage_numeric"], 200000],
+        ],
+      });
+    }
+
+    // 一般（OTHER）
+    if (!map.getLayer(POWER_LAYERS.LINE_OTHER)) {
+      map.addLayer({
+        id: POWER_LAYERS.LINE_OTHER,
+        type: "line",
+        source: POWER_SOURCES.LINES,
+        minzoom: 6,
+        maxzoom: 22,
+        layout: {
+          visibility: "none",
+        },
+        paint: {
+          "line-color": "#999999",
+          "line-width": [
+            "interpolate",
+            ["linear"],
+            ["zoom"],
+            6, 0.6,
+            10, 1.2,
+            14, 2.0,
+          ],
+          "line-dasharray": [2, 2],
+        },
+        filter: [
+          "any",
+          ["!", ["has", "voltage_numeric"]],
+          ["<", ["get", "voltage_numeric"], 140000],
+        ],
+      });
+    }
+  }
+
+  function addSubstationLayer() {
+    if (!map.getLayer(POWER_LAYERS.SUBSTATION)) {
+      map.addLayer({
+        id: POWER_LAYERS.SUBSTATION,
+        type: "circle",
+        source: POWER_SOURCES.SUBSTATIONS,
+        minzoom: 5,
+        maxzoom: 22,
+        layout: {
+          visibility: "none",
+        },
+        paint: {
+          "circle-radius": [
+            "interpolate",
+            ["linear"],
+            ["zoom"],
+            5, 2,
+            10, 4,
+            14, 6,
+          ],
+          "circle-color": "#00bcd4",
+          "circle-stroke-color": "#004d64",
+          "circle-stroke-width": 1,
+          "circle-opacity": 0.9,
+        },
+      });
+    }
+  }
+
+  function addLayers() {
+    addSources();
+    addLineLayers();
+    addSubstationLayer();
+  }
+
+  function ensurePrepared() {
+    if (map.isStyleLoaded && map.isStyleLoaded()) {
+      addLayers();
+    } else {
+      map.on("load", () => {
+        addLayers();
+      });
+    }
+  }
+
+  function setLayerVisibilityById(layerId, visible) {
+    if (!map.getLayer(layerId)) return;
+    map.setLayoutProperty(layerId, "visibility", visible ? "visible" : "none");
+  }
+
+  function setVisibility(key, visible) {
+    state[key] = visible;
+
+    switch (key) {
+      case "line_500kv":
+        setLayerVisibilityById(POWER_LAYERS.LINE_500, visible);
+        break;
+      case "line_275kv":
+        setLayerVisibilityById(POWER_LAYERS.LINE_275, visible);
+        break;
+      case "line_154kv":
+        setLayerVisibilityById(POWER_LAYERS.LINE_154, visible);
+        break;
+      case "line_other":
+        setLayerVisibilityById(POWER_LAYERS.LINE_OTHER, visible);
+        break;
+      case "substations":
+        setLayerVisibilityById(POWER_LAYERS.SUBSTATION, visible);
+        break;
+      default:
+        break;
+    }
+  }
+
+  function showAll() {
+    Object.keys(state).forEach((k) => setVisibility(k, true));
+  }
+
+  function hideAll() {
+    Object.keys(state).forEach((k) => setVisibility(k, false));
+  }
+
+  function getState() {
+    return { ...state };
+  }
+
+  ensurePrepared();
+
+  return {
+    setVisibility,
+    getState,
+    showAll,
+    hideAll,
+    layers: { ...POWER_LAYERS },
+    sources: { ...POWER_SOURCES },
+  };
 }

@@ -100,6 +100,66 @@ export function initUI(map) {
   }
 }
 
+// ======================================================
+// OSM 電力レイヤー用トグル UI 初期化
+// ======================================================
+
+/**
+ * @param {Object} powerController initPowerLayers(map) の戻り値
+ */
+export function initPowerLayerToggles(powerController) {
+  if (!powerController) return;
+
+  const container =
+    document.getElementById("layer-list") ||
+    document.getElementById("layer-panel") ||
+    document.body;
+
+  const group = document.createElement("div");
+  group.className = "layer-group power-layer-group";
+
+  const title = document.createElement("div");
+  title.className = "layer-group-title";
+  title.textContent = "送電線・変電所（OSM）";
+
+  const list = document.createElement("div");
+  list.className = "layer-group-body";
+
+  const configs = [
+    { key: "line_500kv", label: "送電線 500kV" },
+    { key: "line_275kv", label: "送電線 275kV" },
+    { key: "line_154kv", label: "送電線 154kV" },
+    { key: "line_other", label: "送電線 一般（その他）" },
+    { key: "substations", label: "変電所（OSM）" },
+  ];
+
+  configs.forEach((cfg) => {
+    const row = document.createElement("label");
+    row.className = "layer-toggle-row";
+
+    const input = document.createElement("input");
+    input.type = "checkbox";
+    input.className = "layer-toggle-input";
+    input.dataset.layerKey = cfg.key;
+
+    const span = document.createElement("span");
+    span.className = "layer-toggle-label";
+    span.textContent = cfg.label;
+
+    row.appendChild(input);
+    row.appendChild(span);
+    list.appendChild(row);
+
+    input.addEventListener("change", () => {
+      powerController.setVisibility(cfg.key, input.checked);
+    });
+  });
+
+  group.appendChild(title);
+  group.appendChild(list);
+  container.appendChild(group);
+}
+
 // ⚠ 禁止事項 / DO NOT:
 // - Engines（hazard/capacity/parcel）を import しない
 // - UnifiedLayer を直接呼び出さない
