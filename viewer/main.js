@@ -2,14 +2,14 @@
 // main.js - 起動シーケンスのみ（Phase5-C）
 // ======================================================================
 
-import { createMap } from "./map-init.js";
+import { initMap } from "./map-init.js";
 import { initUI, initPowerLayerToggles } from "./ui-init.js";
 import { initHazardLayers } from "./hazard-init.js";
 import { initPowerLayers } from "./power-init.js";
 import { detectPrefecture } from "./utils/prefDetect.js";
 
 document.addEventListener("DOMContentLoaded", () => {
-    const map = createMap();
+    const map = initMap();   // ← 修正ポイント
     window.map = map;
 
     // 既存 UI
@@ -23,9 +23,4 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // UI に「送電線・変電所」トグルを追加
     initPowerLayerToggles(powerController);
-
-    // 必要なら hazardController / powerController を
-    // window にぶら下げてデバッグ用にしてもよい
-    // window.hazardController = hazardController;
-    // window.powerController = powerController;
 });
