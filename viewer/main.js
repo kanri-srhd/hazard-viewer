@@ -1,5 +1,5 @@
 // ======================================================================
-// main.js - 起動シーケンスのみ（Phase5-C）
+// main.js - PhaseX / Phase5-D 安定版 起動シーケンス
 // ======================================================================
 
 import { initMap } from "./map-init.js";
@@ -9,33 +9,44 @@ import { initPowerLayers } from "./power-init.js";
 import { detectPrefecture } from "./utils/prefDetect.js";
 
 document.addEventListener("DOMContentLoaded", () => {
-    const map = initMap();
-    window.map = map;
 
-    // UIは load 前に初期化してOK
+    // --------------------------------------------------
+    // 1. 地図本体を初期化（標準地図＋航空写真）
+    // --------------------------------------------------
+    const map = initMap();
+    window.map = map; // デバッグ用（任意）
+
+    // --------------------------------------------------
+    // 2. UI はロード前に初期化して OK
+    // --------------------------------------------------
     initUI(map);
 
-    // 🟦 全レイヤー初期化は map.on("load") の中で行う
+    // --------------------------------------------------
+    // 3. 全レイヤー初期化は map.on("load") に統一
+    //    → Hazard / Power / その他レイヤーの競合を完全排除
+    // --------------------------------------------------
     map.on("load", () => {
-        console.log("[main] map loaded → initializing hazard & power");
+        console.log("[main] map fully loaded → initializing core layers…");
 
-        // ハザード初期化
+        // -------------------------------
+        // 3-A. ハザードレイヤー初期化
+        // -------------------------------
         const hazardController = initHazard(map, detectPrefecture);
 
-        // 電力レイヤー初期化
+        // -------------------------------
+        // 3-B. 電力（送電線・変電所）レイヤー初期化
+        // -------------------------------
         const powerController = initPowerLayers(map);
 
-        // UI トグル追加
+        // -------------------------------
+        // 3-C. 電力レイヤー UI トグル追加
+        // -------------------------------
         initPowerLayerToggles(powerController);
 
-        // expose（任意）
-        // window.hazardController = hazardController;
-        // window.powerController = powerController;
+        // -------------------------------
+        // 3-D. デバッグ用（必要なら使用）
+        // -------------------------------
+        window.hazardController = hazardController;
+        window.powerController = powerController;
     });
-
-
-    // 必要に応じてデバッグ用に window に expose
-    // window.hazardController = hazardController;
-    // window.powerController = powerController;
-
 });
