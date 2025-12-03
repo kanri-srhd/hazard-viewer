@@ -12,19 +12,29 @@ document.addEventListener("DOMContentLoaded", () => {
     const map = initMap();
     window.map = map;
 
-    // 既存 UI
+    // UIは load 前に初期化してOK
     initUI(map);
 
-    // ハザード初期化（正しい呼び方）
-    const hazardController = initHazard(map, detectPrefecture);
+    // 🟦 全レイヤー初期化は map.on("load") の中で行う
+    map.on("load", () => {
+        console.log("[main] map loaded → initializing hazard & power");
 
-    // 🌏 OSM 電力レイヤー初期化
-    const powerController = initPowerLayers(map);
+        // ハザード初期化
+        const hazardController = initHazard(map, detectPrefecture);
 
-    // UI に「送電線・変電所」トグルを追加
-    initPowerLayerToggles(powerController);
+        // 電力レイヤー初期化
+        const powerController = initPowerLayers(map);
+
+        // UI トグル追加
+        initPowerLayerToggles(powerController);
+
+        // expose（任意）
+        // window.hazardController = hazardController;
+        // window.powerController = powerController;
+    });
+});
 
     // 必要に応じてデバッグ用に window に expose
     // window.hazardController = hazardController;
     // window.powerController = powerController;
-});
+
