@@ -359,26 +359,30 @@ export const hazardMatrix = {
 
   // --------------------------------------------------
   // MLIT 液状化（外部 API）
-  //   - metadata_light.xml には含まれない外部レイヤー
-  //   - URLは MLIT API マニュアルに従い viewer 側で組み立てる前提
   // --------------------------------------------------
   "mlit_liquefaction": {
     id: "mlit_liquefaction",
     title: "液状化（MLIT全国）",
-    directory: null, // GSI ではなく MLIT API のため null
-    template: null,  // 実際のURLは MLIT API 仕様に従って別途設定
+    // MLIT API なので directory は不要
+    directory: null,
+    // ★ API キー入りの正式タイル URL（修正済）
+    template:
+      "https://disaportaldata.mlit.go.jp/raster/liquefaction/d309a51d157041eb93c01c75e809126b/{z}/{x}/{y}.png",
     prefOrData: "data",
     minzoom: 2,
     maxzoom: 17,
+    // 必要であれば opacity を直接定義
+    opacity: 1.0,
     metadata: {
       title: "液状化（MLIT全国）",
       hazardGroup: "external",
       hazardSubGroup: "liquefaction_mlit",
       coverage: "national",
       prefCode: null,
-      matrixSet: null
+      matrixSet: "z2to17"
     }
   }
-};
+
+}; // END of hazardMatrix
 
 export default hazardMatrix;
