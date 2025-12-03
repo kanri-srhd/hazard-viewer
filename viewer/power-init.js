@@ -16,7 +16,7 @@ export const POWER_LAYERS = {
   SUBSTATION: "power-substations",
 };
 
-// 実データのパス（今回のPhaseX用に固定）
+// 実データのパス（今回のPhaseX用）
 const POWER_DATA_URLS = {
   LINES: "data/power/osm/powerlines_osm.geojson",
   SUBSTATIONS: "data/power/osm/substations_points.geojson",
@@ -24,15 +24,6 @@ const POWER_DATA_URLS = {
 
 /**
  * 電力レイヤー（送電線・変電所）を初期化する
- * @param {import("maplibre-gl").Map} map
- * @returns {{
- *   setVisibility: (key: string, visible: boolean) => void,
- *   getState: () => any,
- *   showAll: () => void,
- *   hideAll: () => void,
- *   layers: typeof POWER_LAYERS,
- *   sources: typeof POWER_SOURCES,
- * }}
  */
 export function initPowerLayers(map) {
   const state = {
@@ -43,6 +34,9 @@ export function initPowerLayers(map) {
     substations: false,
   };
 
+  // ----------------------------------------
+  // ソース追加
+  // ----------------------------------------
   function addSources() {
     if (!map.getSource(POWER_SOURCES.LINES)) {
       map.addSource(POWER_SOURCES.LINES, {
@@ -59,6 +53,11 @@ export function initPowerLayers(map) {
     }
   }
 
+  // ----------------------------------------
+  // レイヤー追加（航空写真レイヤーより上に重ねる）
+  // ----------------------------------------
+  const BEFORE = "gsi-photo-layer"; // powerレイヤーを最前面に載せる
+
   function addLineLayers() {
     // 500kV
     if (!map.getLayer(POWER_LAYERS.LINE_500)) {
@@ -66,17 +65,13 @@ export function initPowerLayers(map) {
         id: POWER_LAYERS.LINE_500,
         type: "line",
         source: POWER_SOURCES.LINES,
-        minzoom: 3, // 全国ザックリ見えるように広域から表示
+        minzoom: 3,
         maxzoom: 22,
-        layout: {
-          visibility: "none",
-        },
+        layout: { visibility: "none" },
         paint: {
           "line-color": "#ff0000",
           "line-width": [
-            "interpolate",
-            ["linear"],
-            ["zoom"],
+            "interpolate", ["linear"], ["zoom"],
             3, 1.2,
             8, 2.5,
             12, 3.5,
@@ -88,7 +83,7 @@ export function initPowerLayers(map) {
           ["has", "voltage_numeric"],
           [">=", ["get", "voltage_numeric"], 400000],
         ],
-      });
+      }, BEFORE);
     }
 
     // 275kV
@@ -99,15 +94,11 @@ export function initPowerLayers(map) {
         source: POWER_SOURCES.LINES,
         minzoom: 4,
         maxzoom: 22,
-        layout: {
-          visibility: "none",
-        },
+        layout: { visibility: "none" },
         paint: {
           "line-color": "#ff7f00",
           "line-width": [
-            "interpolate",
-            ["linear"],
-            ["zoom"],
+            "interpolate", ["linear"], ["zoom"],
             4, 1.0,
             8, 2.0,
             12, 3.0,
@@ -120,7 +111,7 @@ export function initPowerLayers(map) {
           [">=", ["get", "voltage_numeric"], 200000],
           ["<", ["get", "voltage_numeric"], 400000],
         ],
-      });
+      }, BEFORE);
     }
 
     // 154kV
@@ -131,15 +122,11 @@ export function initPowerLayers(map) {
         source: POWER_SOURCES.LINES,
         minzoom: 5,
         maxzoom: 22,
-        layout: {
-          visibility: "none",
-        },
+        layout: { visibility: "none" },
         paint: {
           "line-color": "#ffff00",
           "line-width": [
-            "interpolate",
-            ["linear"],
-            ["zoom"],
+            "interpolate", ["linear"], ["zoom"],
             5, 0.8,
             9, 1.6,
             13, 2.6,
@@ -151,10 +138,10 @@ export function initPowerLayers(map) {
           [">=", ["get", "voltage_numeric"], 140000],
           ["<", ["get", "voltage_numeric"], 200000],
         ],
-      });
+      }, BEFORE);
     }
 
-    // 一般（OTHER）
+    // その他（OTHER）
     if (!map.getLayer(POWER_LAYERS.LINE_OTHER)) {
       map.addLayer({
         id: POWER_LAYERS.LINE_OTHER,
@@ -162,15 +149,11 @@ export function initPowerLayers(map) {
         source: POWER_SOURCES.LINES,
         minzoom: 6,
         maxzoom: 22,
-        layout: {
-          visibility: "none",
-        },
+        layout: { visibility: "none" },
         paint: {
           "line-color": "#999999",
           "line-width": [
-            "interpolate",
-            ["linear"],
-            ["zoom"],
+            "interpolate", ["linear"], ["zoom"],
             6, 0.6,
             10, 1.2,
             14, 2.0,
@@ -182,7 +165,7 @@ export function initPowerLayers(map) {
           ["!", ["has", "voltage_numeric"]],
           ["<", ["get", "voltage_numeric"], 140000],
         ],
-      });
+      }, BEFORE);
     }
   }
 
@@ -194,14 +177,10 @@ export function initPowerLayers(map) {
         source: POWER_SOURCES.SUBSTATIONS,
         minzoom: 5,
         maxzoom: 22,
-        layout: {
-          visibility: "none",
-        },
+        layout: { visibility: "none" },
         paint: {
           "circle-radius": [
-            "interpolate",
-            ["linear"],
-            ["zoom"],
+            "interpolate", ["linear"], ["zoom"],
             5, 2,
             10, 4,
             14, 6,
@@ -211,26 +190,33 @@ export function initPowerLayers(map) {
           "circle-stroke-width": 1,
           "circle-opacity": 0.9,
         },
-      });
+      }, BEFORE);
     }
   }
 
+  // ----------------------------------------
+  // 全レイヤー追加
+  // ----------------------------------------
   function addLayers() {
     addSources();
     addLineLayers();
     addSubstationLayer();
   }
 
+  // ----------------------------------------
+  // map.load 後に必ず実行（最も重要）
+  // ----------------------------------------
   function ensurePrepared() {
-    if (map.isStyleLoaded && map.isStyleLoaded()) {
+    map.on("load", () => {
       addLayers();
-    } else {
-      map.on("load", () => {
-        addLayers();
-      });
-    }
+    });
   }
 
+  ensurePrepared();
+
+  // ----------------------------------------
+  // API 公開（UIトグル用）
+  // ----------------------------------------
   function setLayerVisibilityById(layerId, visible) {
     if (!map.getLayer(layerId)) return;
     map.setLayoutProperty(layerId, "visibility", visible ? "visible" : "none");
@@ -238,7 +224,6 @@ export function initPowerLayers(map) {
 
   function setVisibility(key, visible) {
     state[key] = visible;
-
     switch (key) {
       case "line_500kv":
         setLayerVisibilityById(POWER_LAYERS.LINE_500, visible);
@@ -255,8 +240,6 @@ export function initPowerLayers(map) {
       case "substations":
         setLayerVisibilityById(POWER_LAYERS.SUBSTATION, visible);
         break;
-      default:
-        break;
     }
   }
 
@@ -271,8 +254,6 @@ export function initPowerLayers(map) {
   function getState() {
     return { ...state };
   }
-
-  ensurePrepared();
 
   return {
     setVisibility,
