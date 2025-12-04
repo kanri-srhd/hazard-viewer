@@ -1,69 +1,27 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="ja">
 <head>
-<meta charset="utf-8" />
-<title>統合ビューア - ハザード・送電網・地番</title>
-<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
-<meta http-equiv="Cache-Control" content="no-store" />
-<meta http-equiv="Pragma" content="no-cache" />
-<meta http-equiv="Expires" content="0" />
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
+  <meta http-equiv="Cache-Control" content="no-store" />
+  <meta http-equiv="Pragma" content="no-cache" />
+  <meta http-equiv="Expires" content="0" />
 
-<link href="https://unpkg.com/maplibre-gl@3.6.1/dist/maplibre-gl.css" rel="stylesheet" />
-<link href="./style.css" rel="stylesheet" />
-<link href="./layer-ui.css" rel="stylesheet" />
-<script type="module" src="./main.js"></script>
-<script src="https://unpkg.com/maplibre-gl@3.6.1/dist/maplibre-gl.js"></script>
+  <title>統合ビューア - ハザード・送電網・地番</title>
+
+  <!-- MapLibre -->
+  <link href="https://unpkg.com/maplibre-gl@3.6.1/dist/maplibre-gl.css" rel="stylesheet" />
+
+  <!-- Viewer Styles -->
+  <link href="./style.css" rel="stylesheet" />
+  <link href="./layer-ui.css" rel="stylesheet" />
+
+  <!-- MapLibre JS -->
+  <script src="https://unpkg.com/maplibre-gl@3.6.1/dist/maplibre-gl.js"></script>
 </head>
 
 <body>
-
-<script>
-// ServiceWorker アンインストール（キャッシュクリア用）
-if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.getRegistrations().then(function(registrations) {
-    for (let reg of registrations) {
-      reg.unregister();
-      console.log("ServiceWorker unregistered");
-    }
-  });
-}
-</script>
-
-<!-- 地図コンテナ -->
-<div id="map"></div>
-
-<!-- Google Maps風 検索バー -->
-<div id="search-bar">
-  <span class="search-icon" id="search-icon"></span>
-  <input id="search-input" type="text" placeholder="住所、地番、座標を検索" autocomplete="off" />
-  <button id="search-btn">検索</button>
-</div>
-
-<!-- メニューアイコン（≡） - Google Maps風 -->
-<button id="menu-toggle" class="gmaps-btn" aria-label="レイヤーメニュー"></button>
-
-<!-- レイヤーパネル（PC: Drawer / Mobile: Bottom Sheet） -->
-<div id="layer-panel" class="layer-panel">
-  <div class="drag-handle"></div>
-  <div id="layer-control"></div>
-</div>
-
-<!-- パネル背景オーバーレイ（スマホ用） -->
-<div id="panel-overlay" class="panel-overlay"></div>
-
-<!-- Google Maps風 右下ボタン群 -->
-<div id="map-controls">
-  <button id="zoom-in" class="gmaps-btn" aria-label="ズームイン" title="ズームイン"></button>
-  <button id="zoom-out" class="gmaps-btn" aria-label="ズームアウト" title="ズームアウト"></button>
-  <button id="geolocate" class="gmaps-btn" aria-label="現在地" title="現在地"></button>
-  <button id="clear-pins" class="gmaps-btn" aria-label="ピン削除" title="ピン削除"></button>
-</div>
-
-<!-- GSIクレジット -->
-<div id="gsi-credit">
-  <a href="https://maps.gsi.go.jp/" target="_blank" rel="noopener">© 国土地理院</a>
-</div>
-
-<script type="module" src="./main.js?v=20251127-01"></script>
+  <!-- ▼ main.js をここで読み込む（これが最重要） -->
+  <script type="module" src="./main.js"></script>
 </body>
 </html>
