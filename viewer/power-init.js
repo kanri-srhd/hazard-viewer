@@ -59,13 +59,14 @@ export function initPowerLayers(map) {
         maxzoom: 22,
         layout: { visibility: "none" },
         paint: {
-          "line-color": "#ff0000",
+          //"line-color": "#ff0000",
+          "line-color": "#ff5555",
           "line-width": [
             "interpolate", ["linear"], ["zoom"],
-            3, 1.2,
-            8, 2.5,
-            12, 3.5,
-            14, 4.5,
+            3, 2.0,
+            8, 4.0,
+            12, 6.0,
+            14, 7.0
           ],
         },
         filter: [
@@ -86,13 +87,13 @@ export function initPowerLayers(map) {
         maxzoom: 22,
         layout: { visibility: "none" },
         paint: {
-          "line-color": "#ff7f00",
+          //"line-color": "#ff7f00",
+          "line-color": "#d4c600",
           "line-width": [
             "interpolate", ["linear"], ["zoom"],
-            4, 1.0,
-            8, 2.0,
-            12, 3.0,
-            14, 4.0,
+            5, 1.3,
+            9, 2.3,
+            13, 3.3
           ],
         },
         filter: [
@@ -114,12 +115,13 @@ export function initPowerLayers(map) {
         maxzoom: 22,
         layout: { visibility: "none" },
         paint: {
-          "line-color": "#ffff00",
+          //"line-color": "#ffff00",
+          "line-color": "#d4c600",
           "line-width": [
             "interpolate", ["linear"], ["zoom"],
-            5, 0.8,
-            9, 1.6,
-            13, 2.6,
+            5, 1.3,
+            9, 2.3,
+            13, 3.3
           ],
         },
         filter: [
@@ -141,12 +143,13 @@ export function initPowerLayers(map) {
         maxzoom: 22,
         layout: { visibility: "none" },
         paint: {
-          "line-color": "#999999",
+          //"line-color": "#999999",
+          "line-color": "#666666",
           "line-width": [
             "interpolate", ["linear"], ["zoom"],
-            6, 0.6,
-            10, 1.2,
-            14, 2.0,
+            6, 1.0,
+            10, 1.8,
+            14, 2.6
           ],
           "line-dasharray": [2, 2],
         },
@@ -171,13 +174,13 @@ export function initPowerLayers(map) {
         paint: {
           "circle-radius": [
             "interpolate", ["linear"], ["zoom"],
-            5, 2,
-            10, 4,
-            14, 6,
+            5, 3, 10, 5, 14, 8, 22, 12
           ],
-          "circle-color": "#00bcd4",
-          "circle-stroke-color": "#004d64",
-          "circle-stroke-width": 1,
+          //"circle-color": "#00bcd4",
+          "circle-color": "#00c8ff",
+          //"circle-stroke-color": "#004d64",
+          "circle-stroke-color": "#ffffff",
+          "circle-stroke-width": 1.2,
           "circle-opacity": 0.9,
         },
       }, BEFORE);
