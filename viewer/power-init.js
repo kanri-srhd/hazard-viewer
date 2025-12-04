@@ -17,8 +17,8 @@ export const POWER_LAYERS = {
 };
 
 const POWER_DATA_URLS = {
-  LINES: "data/power/osm/powerlines_osm.geojson",
-  SUBSTATIONS: "data/power/osm/substations_points.geojson",
+  LINES: "data/osm/powerlines_osm.geojson",
+  SUBSTATIONS: "data/osm/substations_points.geojson",
 };
 
 export function initPowerLayers(map) {
