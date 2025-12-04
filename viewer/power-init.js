@@ -1,20 +1,19 @@
 // viewer/power-init.js
 // ============================================================================
-// 送電線・変電所（OSM）レイヤー初期化
+// 送電線・変電所（OSM）レイヤー初期化（OIM準拠）
 // ============================================================================
 
-// ※ capacity-engine との連携は、実装内容を確認した上で後続ステップで統合する。
-// import などで壊さないよう、現時点では純粋に OSM ベースの表示に徹する。
+// capacity-engine（空容量の入口。実装は stub なので TBD のまま出す）
+import { evaluateCapacity } from "../engines/capacity-engine.js";
 
 // -----------------------------------------------------------------------------
-// MapLibre 共有インスタンス
+// MapLibre インスタンス（共有）
 // -----------------------------------------------------------------------------
 let map;
 
 // -----------------------------------------------------------------------------
-// Source / Layer ID（PROJECT_STATE に基づく “事実”）
+// Source / Layer ID（PROJECT_STATE を厳守）
 // -----------------------------------------------------------------------------
-// viewer/index.html からの相対パス：viewer/data/osm/... → JS からは "data/osm/..." で到達
 const POWER_SOURCES = {
   LINES: "power-lines-osm",
   SUB_POINTS: "power-substations-points",
@@ -34,29 +33,25 @@ const POWER_LAYERS = {
 };
 
 // -----------------------------------------------------------------------------
-// UI の状態（レイヤーパネルの 3 トグルと一致させる）
+// UI 状態（レイヤーパネルと1対1対応）
 // -----------------------------------------------------------------------------
-// 送電線・変電所（OSM）
-//   [ ] 送電線 基幹   → line_backbone
-//   [ ] 送電線 一般   → line_general
-//   [ ] 変電所        → substations
 const state = {
-  line_backbone: false,
-  line_general: false,
-  substations: false,
+  line_backbone: false,   // 500kV + 275kV
+  line_general: false,    // 154kV + その他
+  substations: false,     // ポリゴン + ポイント
 };
 
 // -----------------------------------------------------------------------------
-// Utility: 可視性
+// Utility：レイヤー可視性
 // -----------------------------------------------------------------------------
-function setVisibilityInternal(layerId, visible) {
-  if (!map) return;
-  if (!map.getLayer(layerId)) return;
-  map.setLayoutProperty(layerId, "visibility", visible ? "visible" : "none");
+function setLayerVisibility(id, visible) {
+  if (map && map.getLayer(id)) {
+    map.setLayoutProperty(id, "visibility", visible ? "visible" : "none");
+  }
 }
 
 // -----------------------------------------------------------------------------
-// ソース追加（PROJECT_STATE のパスをそのまま使用）
+// ソース登録（PROJECT_STATE パスを厳守）
 // -----------------------------------------------------------------------------
 function addSources() {
   // 送電線
@@ -85,10 +80,11 @@ function addSources() {
 }
 
 // -----------------------------------------------------------------------------
-// 送電線レイヤー（基幹 + 一般）
+// 送電線レイヤー（OIM と同等の色分け）
 // -----------------------------------------------------------------------------
 function addLineLayers() {
-  // 500 kV（基幹：濃赤）
+
+  // 500kV（濃赤）
   if (!map.getLayer(POWER_LAYERS.BACKBONE_500)) {
     map.addLayer({
       id: POWER_LAYERS.BACKBONE_500,
@@ -96,13 +92,10 @@ function addLineLayers() {
       source: POWER_SOURCES.LINES,
       layout: { visibility: "none" },
       paint: {
-        "line-color": "#d32f2f", // 濃赤
+        "line-color": "#d32f2f",
         "line-width": [
           "interpolate", ["linear"], ["zoom"],
-          4, 1.8,
-          8, 3.0,
-          12, 4.5,
-          14, 6.0
+          4, 1.6, 8, 3.0, 12, 4.6, 14, 6.0
         ],
         "line-opacity": 0.95,
       },
@@ -114,7 +107,7 @@ function addLineLayers() {
     });
   }
 
-  // 275 kV（基幹：濃橙）
+  // 275kV（濃橙）
   if (!map.getLayer(POWER_LAYERS.BACKBONE_275)) {
     map.addLayer({
       id: POWER_LAYERS.BACKBONE_275,
@@ -122,13 +115,10 @@ function addLineLayers() {
       source: POWER_SOURCES.LINES,
       layout: { visibility: "none" },
       paint: {
-        "line-color": "#f57c00", // 濃橙
+        "line-color": "#f57c00",
         "line-width": [
           "interpolate", ["linear"], ["zoom"],
-          4, 1.6,
-          8, 2.8,
-          12, 4.0,
-          14, 5.5
+          4, 1.4, 8, 2.6, 12, 4.0, 14, 5.4
         ],
         "line-opacity": 0.95,
       },
@@ -141,7 +131,7 @@ function addLineLayers() {
     });
   }
 
-  // 154 kV（一般：黄色）
+  // 154kV（黄色）
   if (!map.getLayer(POWER_LAYERS.GENERAL_154)) {
     map.addLayer({
       id: POWER_LAYERS.GENERAL_154,
@@ -149,13 +139,10 @@ function addLineLayers() {
       source: POWER_SOURCES.LINES,
       layout: { visibility: "none" },
       paint: {
-        "line-color": "#fbc02d", // 黄色
+        "line-color": "#fbc02d",
         "line-width": [
           "interpolate", ["linear"], ["zoom"],
-          4, 1.4,
-          8, 2.4,
-          12, 3.4,
-          14, 4.5
+          4, 1.2, 8, 2.2, 12, 3.4, 14, 4.5
         ],
         "line-opacity": 0.9,
       },
@@ -168,7 +155,7 @@ function addLineLayers() {
     });
   }
 
-  // その他（一般：灰色）
+  // その他（灰色）
   if (!map.getLayer(POWER_LAYERS.GENERAL_OTHER)) {
     map.addLayer({
       id: POWER_LAYERS.GENERAL_OTHER,
@@ -179,12 +166,9 @@ function addLineLayers() {
         "line-color": "#999999",
         "line-width": [
           "interpolate", ["linear"], ["zoom"],
-          4, 1.2,
-          8, 2.0,
-          12, 3.0,
-          14, 4.0
+          4, 1.1, 8, 2.0, 12, 3.2, 14, 4.2
         ],
-        "line-opacity": 0.8,
+        "line-opacity": 0.75,
       },
       filter: [
         "any",
@@ -196,10 +180,11 @@ function addLineLayers() {
 }
 
 // -----------------------------------------------------------------------------
-// 変電所（ポリゴン + ポイント）
+// 変電所（OIM と同じポリゴン＋小さなポイント）
 // -----------------------------------------------------------------------------
 function addSubstationLayers() {
-  // ポリゴン（先に追加：下地）
+
+  // ポリゴン（OIM と全く同じ色・outline）
   if (!map.getLayer(POWER_LAYERS.SUB_POLY)) {
     map.addLayer({
       id: POWER_LAYERS.SUB_POLY,
@@ -208,13 +193,13 @@ function addSubstationLayers() {
       layout: { visibility: "none" },
       paint: {
         "fill-color": "#c8a4ff",
-        "fill-opacity": 0.45,
+        "fill-opacity": 0.32,
         "fill-outline-color": "#6a4faa",
       },
     });
   }
 
-  // ポイント（上に載せる）
+  // ポイント（OIM の黒い小点に合わせる）
   if (!map.getLayer(POWER_LAYERS.SUB_POINTS)) {
     map.addLayer({
       id: POWER_LAYERS.SUB_POINTS,
@@ -224,31 +209,35 @@ function addSubstationLayers() {
       paint: {
         "circle-radius": [
           "interpolate", ["linear"], ["zoom"],
-          4, 3,
-          8, 4,
-          12, 5,
-          14, 6
+          4, 2.0, 8, 3.0, 12, 4.0, 14, 5.0
         ],
-        "circle-color": "#333333",
+        "circle-color": "#000000",
         "circle-stroke-color": "#ffffff",
-        "circle-stroke-width": 2,
+        "circle-stroke-width": 1,
       },
     });
 
-    // ポップアップ：まずは OSM 属性のみ（空容量統合は後続で capacity-engine と接続）
-    map.on("click", POWER_LAYERS.SUB_POINTS, (e) => {
-      if (!e.features || !e.features.length) return;
+    // ポップアップ（OSM + 空容量入口）
+    map.on("click", POWER_LAYERS.SUB_POINTS, async (e) => {
+      if (!e.features?.length) return;
+
       const props = e.features[0].properties || {};
 
-      const name = props.name || "変電所";
-      const operator = props.operator || props["operator:en"] || "N/A";
-      const voltage = props.voltage || (props.voltage_kv ? props.voltage_kv + " kV" : "N/A");
+      // 空容量取得（現状 stub のため TBD）
+      const cap = await evaluateCapacity({
+        lng: e.lngLat.lng,
+        lat: e.lngLat.lat,
+      });
 
       const html = `
         <div style="font-size:13px;font-family:sans-serif;line-height:1.4;">
-          <div style="font-weight:bold;margin-bottom:4px;">${name}</div>
-          <div>運営者: ${operator}</div>
-          <div>電圧: ${voltage}</div>
+          <b>${props.name || "変電所"}</b><br>
+          運営者: ${props.operator || "N/A"}<br>
+          電圧: ${props.voltage || "N/A"}<br>
+          <hr style="margin:6px 0;">
+          <b>空容量（試験実装）</b><br>
+          状態: ${cap.overallDecision}<br>
+          逆潮流空容量: ${cap.reverseCapacity.availableKw ?? "TBD"} kW<br>
         </div>
       `;
 
@@ -258,7 +247,6 @@ function addSubstationLayers() {
         .addTo(map);
     });
 
-    // ホバー時にカーソルを pointer に
     map.on("mouseenter", POWER_LAYERS.SUB_POINTS, () => {
       map.getCanvas().style.cursor = "pointer";
     });
@@ -269,43 +257,36 @@ function addSubstationLayers() {
 }
 
 // -----------------------------------------------------------------------------
-// UI から呼ばれるトグル API
+// UI から呼ばれる公開 API（main.js → ui-init.js）
 // -----------------------------------------------------------------------------
 export function setPowerVisibility(key, visible) {
   state[key] = visible;
 
   switch (key) {
     case "line_backbone":
-      setVisibilityInternal(POWER_LAYERS.BACKBONE_500, visible);
-      setVisibilityInternal(POWER_LAYERS.BACKBONE_275, visible);
+      setLayerVisibility(POWER_LAYERS.BACKBONE_500, visible);
+      setLayerVisibility(POWER_LAYERS.BACKBONE_275, visible);
       break;
 
     case "line_general":
-      setVisibilityInternal(POWER_LAYERS.GENERAL_154, visible);
-      setVisibilityInternal(POWER_LAYERS.GENERAL_OTHER, visible);
+      setLayerVisibility(POWER_LAYERS.GENERAL_154, visible);
+      setLayerVisibility(POWER_LAYERS.GENERAL_OTHER, visible);
       break;
 
     case "substations":
-      setVisibilityInternal(POWER_LAYERS.SUB_POLY, visible);
-      setVisibilityInternal(POWER_LAYERS.SUB_POINTS, visible);
-      break;
-
-    default:
-      // 想定外キーは無視
+      setLayerVisibility(POWER_LAYERS.SUB_POLY, visible);
+      setLayerVisibility(POWER_LAYERS.SUB_POINTS, visible);
       break;
   }
 }
 
 // -----------------------------------------------------------------------------
-// init（main.js から呼ばれる）
+// init（main.js の map.on("load") から呼ばれる）
 // -----------------------------------------------------------------------------
-// main.js 側イメージ：
-//   const powerController = initPowerLayers(map);
-//   initPowerLayerToggles(powerController);
 export function initPowerLayers(mapInstance) {
   map = mapInstance;
 
-  console.log("[power-init] init OSM power layers");
+  console.log("[power-init] load OSM power layers");
 
   addSources();
   addLineLayers();
