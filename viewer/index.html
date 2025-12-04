@@ -3,9 +3,9 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
-  <meta http-equiv="Cache-Control" content="no-store" />
-  <meta http-equiv="Pragma" content="no-cache" />
-  <meta http-equiv="Expires" content="0" />
+  <meta http-equiv="Cache-Control" content="no-store">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
 
   <title>統合ビューア - ハザード・送電網・地番</title>
 
@@ -25,16 +25,42 @@
   <!-- ▼ 地図描画先（必須） -->
   <div id="map"></div>
 
-  <!-- ▼ パネル（UI で利用）-->
-  <div id="layer-panel"></div>
+  <!-- ▼ 検索バー -->
+  <div id="search-bar">
+    <div class="search-icon"><img src="../icons/search.svg"></div>
+    <input id="search-input" type="text" placeholder="住所、地番、座標を検索">
+    <button id="search-btn">検索</button>
+  </div>
 
-  <!-- ▼ メニュー（UI-init.js が初期化）-->
-  <div id="menu-button"></div>
+  <!-- ▼ メニュー（≡） -->
+  <button id="menu-toggle" class="gmaps-btn">
+    <img src="../icons/menu.svg">
+  </button>
 
-  <!-- ▼ 検索バー（ui-init.js が制御する DOM）-->
-  <div id="search-container"></div>
+  <!-- ▼ 右下のボタン群（ズーム、現在地、ゴミ箱） -->
+  <div id="map-controls">
+    <button id="zoom-in" class="gmaps-btn"><img src="../icons/zoom_in.svg"></button>
+    <button id="zoom-out" class="gmaps-btn"><img src="../icons/zoom_out.svg"></button>
+    <button id="locate-btn" class="gmaps-btn"><img src="../icons/locate.svg"></button>
+    <button id="trash-btn" class="gmaps-btn"><img src="../icons/trash.svg"></button>
+  </div>
 
-  <!-- ▼ main.js を読み込む（最重要） -->
+  <!-- ▼ GSI クレジット -->
+  <div id="gsi-credit">
+    © <a href="https://maps.gsi.go.jp/development/ichiran.html">国土地理院</a>
+  </div>
+
+  <!-- ▼ レイヤーパネル（左側） -->
+  <div id="layer-panel" class="layer-panel hidden">
+    <div class="drag-handle"></div>
+    <div id="layer-control"></div>
+  </div>
+
+  <!-- ▼ 凡例パネル（右側、送電線用） -->
+  <div id="power-legend-panel" style="display:none;"></div>
+
+  <!-- ▼ main.js を読み込む -->
   <script type="module" src="./main.js"></script>
+
 </body>
 </html>
