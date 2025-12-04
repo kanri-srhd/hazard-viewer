@@ -145,3 +145,17 @@
 .legend-opacity-block {
   margin-top: 12px;
 }
+
+.power-layer-info-btn {
+  margin-left: auto;
+  font-size: 12px;
+  border: none;
+  background: transparent;
+  color: #5f6368;
+  cursor: pointer;
+  padding: 2px 4px;
+}
+
+.power-layer-info-btn:hover {
+  color: #174ea6;
+}

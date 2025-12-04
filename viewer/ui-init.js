@@ -126,34 +126,56 @@ export function initPowerLayerToggles(powerController) {
   list.className = "layer-group-body";
 
   const configs = [
-    { key: "line_500kv", label: "送電線 500kV" },
-    { key: "line_275kv", label: "送電線 275kV" },
-    { key: "line_154kv", label: "送電線 154kV" },
-    { key: "line_other", label: "送電線 一般（その他）" },
-    { key: "substations", label: "変電所（OSM）" },
-  ];
+  {
+    key: "kikan",
+    label: "送電線 基幹",
+    targets: ["line_500kv", "line_275kv"],
+    legendType: "kikan",
+  },
+  {
+    key: "ippan",
+    label: "送電線 一般",
+    targets: ["line_154kv", "line_other"],
+    legendType: "ippan",
+  },
+  {
+    key: "substations",
+    label: "変電所（OSM）",
+    targets: ["substations"],
+    legendType: "substation",
+  },
+];
 
-  configs.forEach((cfg) => {
-    const row = document.createElement("label");
-    row.className = "layer-toggle-row";
+configs.forEach((cfg) => {
+  const row = document.createElement("div");
+  row.className = "layer-toggle-row";
 
-    const input = document.createElement("input");
-    input.type = "checkbox";
-    input.className = "layer-toggle-input";
-    input.dataset.layerKey = cfg.key;
+  const input = document.createElement("input");
+  input.type = "checkbox";
+  input.className = "layer-toggle-input";
+  input.dataset.layerKey = cfg.key;
+  input.checked = false;
 
-    const span = document.createElement("span");
-    span.className = "layer-toggle-label";
-    span.textContent = cfg.label;
+  const labelSpan = document.createElement("span");
+  labelSpan.className = "layer-toggle-label";
+  labelSpan.textContent = cfg.label;
 
-    row.appendChild(input);
-    row.appendChild(span);
-    list.appendChild(row);
+  // 凡例アイコン（ⓘ）
+  const infoBtn = document.createElement("button");
+  infoBtn.type = "button";
+  infoBtn.className = "power-layer-info-btn";
+  infoBtn.dataset.type = cfg.legendType;
+  infoBtn.textContent = "ⓘ";
 
-    input.addEventListener("change", () => {
-      powerController.setVisibility(cfg.key, input.checked);
-    });
+  row.appendChild(input);
+  row.appendChild(labelSpan);
+  row.appendChild(infoBtn);
+  list.appendChild(row);
+
+  input.addEventListener("change", () => {
+    cfg.targets.forEach((t) => powerController.setVisibility(t, input.checked));
   });
+});
 
   group.appendChild(title);
   group.appendChild(list);
