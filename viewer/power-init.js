@@ -243,14 +243,14 @@ function addSubstationLayer() {
           "interpolate",
           ["linear"],
           ["zoom"],
-          3, 2.0,
-          8, 3.0,
-          12, 6.0,
-          14, 8.0,
+          3, 1.5,
+          8, 2.0,
+          12, 3.0,
+          14, 4.0,
         ],
-        "circle-color": "#ffcc00",
-        "circle-stroke-color": "#000000",
-        "circle-stroke-width": 1,
+        "circle-color": "#000000",
+        "circle-stroke-color": "#ffffff",
+        "circle-stroke-width": 1
       },
     });
   }
