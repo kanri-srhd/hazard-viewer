@@ -246,6 +246,7 @@ function addLayers() {
         break;
       case "substations":
         setLayerVisibilityById(POWER_LAYERS.SUBSTATION, visible);
+        setLayerVisibilityById("power-substation-polygons", visible);
         break;
     }
   }
