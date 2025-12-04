@@ -16,15 +16,11 @@ export const POWER_LAYERS = {
   SUBSTATION: "power-substations",
 };
 
-// 実データのパス（今回のPhaseX用）
 const POWER_DATA_URLS = {
   LINES: "data/power/osm/powerlines_osm.geojson",
   SUBSTATIONS: "data/power/osm/substations_points.geojson",
 };
 
-/**
- * 電力レイヤー（送電線・変電所）を初期化する
- */
 export function initPowerLayers(map) {
   const state = {
     line_500kv: false,
@@ -34,9 +30,6 @@ export function initPowerLayers(map) {
     substations: false,
   };
 
-  // ----------------------------------------
-  // ソース追加
-  // ----------------------------------------
   function addSources() {
     if (!map.getSource(POWER_SOURCES.LINES)) {
       map.addSource(POWER_SOURCES.LINES, {
@@ -53,10 +46,7 @@ export function initPowerLayers(map) {
     }
   }
 
-  // ----------------------------------------
-  // レイヤー追加（航空写真レイヤーより上に重ねる）
-  // ----------------------------------------
-  const BEFORE = "gsi-photo-layer"; // powerレイヤーを最前面に載せる
+  const BEFORE = "gsi-photo-layer";
 
   function addLineLayers() {
     // 500kV
@@ -194,29 +184,19 @@ export function initPowerLayers(map) {
     }
   }
 
-  // ----------------------------------------
-  // 全レイヤー追加
-  // ----------------------------------------
   function addLayers() {
     addSources();
     addLineLayers();
     addSubstationLayer();
   }
 
-  // ----------------------------------------
-  // map.load 後に必ず実行（最も重要）
-  // ----------------------------------------
+  // loadは main.js で保証されているので即実行でOK
   function ensurePrepared() {
-    map.on("load", () => {
-      addLayers();
-    });
+    addLayers();
   }
 
   ensurePrepared();
 
-  // ----------------------------------------
-  // API 公開（UIトグル用）
-  // ----------------------------------------
   function setLayerVisibilityById(layerId, visible) {
     if (!map.getLayer(layerId)) return;
     map.setLayoutProperty(layerId, "visibility", visible ? "visible" : "none");
