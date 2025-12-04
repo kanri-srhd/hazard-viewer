@@ -22,27 +22,25 @@
 
 <body>
 
-  <!-- ▼ 地図描画先（必須） -->
+  <!-- ▼ 地図描画先 -->
   <div id="map"></div>
 
-  <!-- ▼ 検索バー -->
+  <!-- ▼ Google Maps風検索バー -->
   <div id="search-bar">
-    <div class="search-icon"><img src="../icons/search.svg"></div>
+    <div id="search-icon"></div> <!-- ★ ui-init.js が参照 -->
     <input id="search-input" type="text" placeholder="住所、地番、座標を検索">
     <button id="search-btn">検索</button>
   </div>
 
   <!-- ▼ メニュー（≡） -->
-  <button id="menu-toggle" class="gmaps-btn">
-    <img src="../icons/menu.svg">
-  </button>
+  <button id="menu-toggle" class="gmaps-btn"></button>
 
-  <!-- ▼ 右下のボタン群（ズーム、現在地、ゴミ箱） -->
+  <!-- ▼ 右下コントロール -->
   <div id="map-controls">
-    <button id="zoom-in" class="gmaps-btn"><img src="../icons/zoom_in.svg"></button>
-    <button id="zoom-out" class="gmaps-btn"><img src="../icons/zoom_out.svg"></button>
-    <button id="locate-btn" class="gmaps-btn"><img src="../icons/locate.svg"></button>
-    <button id="trash-btn" class="gmaps-btn"><img src="../icons/trash.svg"></button>
+    <button id="zoom-in" class="gmaps-btn"></button>
+    <button id="zoom-out" class="gmaps-btn"></button>
+    <button id="geolocate" class="gmaps-btn"></button>   <!-- ★ 修正 -->
+    <button id="clear-pins" class="gmaps-btn"></button> <!-- ★ 修正 -->
   </div>
 
   <!-- ▼ GSI クレジット -->
@@ -50,16 +48,16 @@
     © <a href="https://maps.gsi.go.jp/development/ichiran.html">国土地理院</a>
   </div>
 
-  <!-- ▼ レイヤーパネル（左側） -->
+  <!-- ▼ レイヤーパネル -->
   <div id="layer-panel" class="layer-panel hidden">
     <div class="drag-handle"></div>
     <div id="layer-control"></div>
   </div>
 
-  <!-- ▼ 凡例パネル（右側、送電線用） -->
+  <!-- ▼ 電力凡例パネル -->
   <div id="power-legend-panel" style="display:none;"></div>
 
-  <!-- ▼ main.js を読み込む -->
+  <!-- ▼ main.js -->
   <script type="module" src="./main.js"></script>
 
 </body>
