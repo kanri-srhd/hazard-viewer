@@ -235,6 +235,22 @@ export function initPowerLayers(map) {
     return { ...state };
   }
 
+  // 透過率更新（凡例パネルから呼ばれる）
+window.updatePowerOpacity = function(opacity) {
+
+  // 基幹
+  map.setPaintProperty("power-line-500kv", "line-opacity", opacity);
+  map.setPaintProperty("power-line-275kv", "line-opacity", opacity);
+
+  // 一般
+  map.setPaintProperty("power-line-154kv", "line-opacity", opacity);
+  map.setPaintProperty("power-line-other", "line-opacity", opacity);
+
+  // 変電所
+  map.setPaintProperty("power-substations", "circle-opacity", opacity);
+};
+
+
   return {
     setVisibility,
     getState,

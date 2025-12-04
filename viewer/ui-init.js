@@ -160,6 +160,103 @@ export function initPowerLayerToggles(powerController) {
   container.appendChild(group);
 }
 
+/* ============================================================
+   電力レイヤー凡例パネル UI（右側フロート）
+   ============================================================ */
+
+// 凡例パネル生成
+function createPowerLegendPanel() {
+  const panel = document.createElement("div");
+  panel.id = "power-legend-panel";
+  panel.style.display = "none"; // 初期非表示
+  panel.innerHTML = `
+    <div class="power-legend-header">
+      <span id="power-legend-title">送電線凡例</span>
+      <button id="power-legend-close">×</button>
+    </div>
+
+    <div class="power-legend-body">
+      <div id="power-legend-content"></div>
+
+      <div class="legend-opacity-block">
+        <label for="power-opacity-slider">透過率：</label>
+        <input type="range" id="power-opacity-slider" min="10" max="100" value="90">
+        <span id="power-opacity-value">90%</span>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(panel);
+}
+
+// アイコン（i）クリックによるパネル開閉
+function attachPowerLegendHandlers(powerController) {
+  const items = document.querySelectorAll(".power-layer-info-btn");
+  items.forEach(btn => {
+    btn.addEventListener("click", () => {
+      const type = btn.dataset.type; // "kikan" or "ippan" or "substation"
+      showPowerLegend(type, powerController);
+    });
+  });
+
+  document.getElementById("power-legend-close").addEventListener("click", () => {
+    document.getElementById("power-legend-panel").style.display = "none";
+  });
+
+  // 透過率変更
+  document.getElementById("power-opacity-slider").addEventListener("input", e => {
+    const val = Number(e.target.value) / 100;
+    document.getElementById("power-opacity-value").innerText = `${e.target.value}%`;
+    window.updatePowerOpacity(val);
+  });
+}
+
+// 凡例内容をタイプごとに出し分け
+function showPowerLegend(type, powerController) {
+  const panel = document.getElementById("power-legend-panel");
+  const content = document.getElementById("power-legend-content");
+  const title = document.getElementById("power-legend-title");
+
+  if (type === "kikan") {
+    title.innerText = "送電線 基幹（凡例）";
+    content.innerHTML = `
+      <div class="legend-line"><span class="legend-color" style="background:#b30000"></span> 500kV（濃赤）</div>
+      <div class="legend-line"><span class="legend-color" style="background:#ff6a00"></span> 275kV（濃橙）</div>
+      <hr>
+      <p>基幹送電線（500kV + 275kV）。大規模電源間を結ぶ幹線。</p>
+    `;
+  }
+
+  if (type === "ippan") {
+    title.innerText = "送電線 一般（凡例）";
+    content.innerHTML = `
+      <div class="legend-line"><span class="legend-color" style="background:#d4c600"></span> 154kV（濃黄）</div>
+      <div class="legend-line"><span class="legend-color" style="background:#666666"></span> その他（灰色）</div>
+      <hr>
+      <p>一般送電線（154kV以下）。地域内配電・系統接続用途。</p>
+    `;
+  }
+
+  if (type === "substation") {
+    title.innerText = "変電所（凡例）";
+    content.innerHTML = `
+      <div class="legend-line">
+        <span class="legend-color" style="background:#00bcd4;border:2px solid #fff"></span>
+        変電所（OSM/OIM）
+      </div>
+      <hr>
+      <p>主要変電所（円の大きさはzoom依存）。</p>
+    `;
+  }
+
+  panel.style.display = "block";
+}
+
+// 初期化呼び出し（main.jsから渡された powerController を使用）
+export function initPowerLegendUI(powerController) {
+  createPowerLegendPanel();
+  attachPowerLegendHandlers(powerController);
+}
+
 // ⚠ 禁止事項 / DO NOT:
 // - Engines（hazard/capacity/parcel）を import しない
 // - UnifiedLayer を直接呼び出さない

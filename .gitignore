@@ -58,3 +58,7 @@ data/power/capacity/tepco_osm_test100.json
 !data/capacity/*.json
 !data/capacity/history/**
 !data/capacity/deltas/**
+
+# --- Allow OSM power datasets inside viewer/data/osm ---
+!viewer/data/osm/*.geojson
+
