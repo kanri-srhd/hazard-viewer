@@ -49,118 +49,121 @@ export function initPowerLayers(map) {
   const BEFORE = "gsi-photo-layer";
 
   function addLineLayers() {
-    // 500kV
-    if (!map.getLayer(POWER_LAYERS.LINE_500)) {
-      map.addLayer({
-        id: POWER_LAYERS.LINE_500,
-        type: "line",
-        source: POWER_SOURCES.LINES,
-        minzoom: 3,
-        maxzoom: 22,
-        layout: { visibility: "none" },
-        paint: {
-          //"line-color": "#ff0000",
-          "line-color": "#ff5555",
-          "line-width": [
-            "interpolate", ["linear"], ["zoom"],
-            3, 2.0,
-            8, 4.0,
-            12, 6.0,
-            14, 7.0
-          ],
-        },
-        filter: [
-          "all",
-          ["has", "voltage_numeric"],
-          [">=", ["get", "voltage_numeric"], 400000],
-        ],
-      }, BEFORE);
-    }
 
-    // 275kV
-    if (!map.getLayer(POWER_LAYERS.LINE_275)) {
-      map.addLayer({
-        id: POWER_LAYERS.LINE_275,
-        type: "line",
-        source: POWER_SOURCES.LINES,
-        minzoom: 4,
-        maxzoom: 22,
-        layout: { visibility: "none" },
-        paint: {
-          //"line-color": "#ff7f00",
-          "line-color": "#d4c600",
-          "line-width": [
-            "interpolate", ["linear"], ["zoom"],
-            5, 1.3,
-            9, 2.3,
-            13, 3.3
-          ],
-        },
-        filter: [
-          "all",
-          ["has", "voltage_numeric"],
-          [">=", ["get", "voltage_numeric"], 200000],
-          ["<", ["get", "voltage_numeric"], 400000],
+  // 500kV（濃赤：以前の表示）
+  if (!map.getLayer(POWER_LAYERS.LINE_500)) {
+    map.addLayer({
+      id: POWER_LAYERS.LINE_500,
+      type: "line",
+      source: POWER_SOURCES.LINES,
+      minzoom: 3,
+      maxzoom: 22,
+      layout: { visibility: "none" },
+      paint: {
+        "line-color": "#ff0000",   
+        "line-width": [
+          "interpolate", ["linear"], ["zoom"],
+          3, 2.5,
+          8, 4.5,
+          12, 6.5,
+          14, 8.5
         ],
-      }, BEFORE);
-    }
-
-    // 154kV
-    if (!map.getLayer(POWER_LAYERS.LINE_154)) {
-      map.addLayer({
-        id: POWER_LAYERS.LINE_154,
-        type: "line",
-        source: POWER_SOURCES.LINES,
-        minzoom: 5,
-        maxzoom: 22,
-        layout: { visibility: "none" },
-        paint: {
-          //"line-color": "#ffff00",
-          "line-color": "#d4c600",
-          "line-width": [
-            "interpolate", ["linear"], ["zoom"],
-            5, 1.3,
-            9, 2.3,
-            13, 3.3
-          ],
-        },
-        filter: [
-          "all",
-          ["has", "voltage_numeric"],
-          [">=", ["get", "voltage_numeric"], 140000],
-          ["<", ["get", "voltage_numeric"], 200000],
-        ],
-      }, BEFORE);
-    }
-
-    // その他（OTHER）
-    if (!map.getLayer(POWER_LAYERS.LINE_OTHER)) {
-      map.addLayer({
-        id: POWER_LAYERS.LINE_OTHER,
-        type: "line",
-        source: POWER_SOURCES.LINES,
-        minzoom: 6,
-        maxzoom: 22,
-        layout: { visibility: "none" },
-        paint: {
-          //"line-color": "#999999",
-          "line-color": "#666666",
-          "line-width": [
-            "interpolate", ["linear"], ["zoom"],
-            6, 1.0,
-            10, 1.8,
-            14, 2.6
-          ],
-          "line-dasharray": [2, 2],
-        },
-        filter: [
-          "any",
-          ["!", ["has", "voltage_numeric"]],
-          ["<", ["get", "voltage_numeric"], 140000],
-        ],
-      }, BEFORE);
-    }
+        "line-opacity": 1.0
+      },
+      filter: [
+        "all",
+        ["has", "voltage_numeric"],
+        [">=", ["get", "voltage_numeric"], 400000]  // 500kV〜
+      ]
+    });   // ★ BEFOREなし → 常に最前面へ
   }
+
+  // 275kV（明るい橙）
+  if (!map.getLayer(POWER_LAYERS.LINE_275)) {
+    map.addLayer({
+      id: POWER_LAYERS.LINE_275,
+      type: "line",
+      source: POWER_SOURCES.LINES,
+      minzoom: 3,
+      maxzoom: 22,
+      layout: { visibility: "none" },
+      paint: {
+        "line-color": "#ff8800",   
+        "line-width": [
+          "interpolate", ["linear"], ["zoom"],
+          3, 2.3,
+          8, 4.0,
+          12, 6.0,
+          14, 8.0
+        ],
+        "line-opacity": 1.0
+      },
+      filter: [
+        "all",
+        ["has", "voltage_numeric"],
+        [">=", ["get", "voltage_numeric"], 200000],
+        ["<", ["get", "voltage_numeric"], 400000]
+      ]
+    });
+  }
+
+  // 154kV（黄色）
+  if (!map.getLayer(POWER_LAYERS.LINE_154)) {
+    map.addLayer({
+      id: POWER_LAYERS.LINE_154,
+      type: "line",
+      source: POWER_SOURCES.LINES,
+      minzoom: 3,
+      maxzoom: 22,
+      layout: { visibility: "none" },
+      paint: {
+        "line-color": "#ffff00", 
+        "line-width": [
+          "interpolate", ["linear"], ["zoom"],
+          3, 1.8,
+          8, 3.0,
+          12, 4.8,
+          14, 6.0
+        ],
+        "line-opacity": 1.0
+      },
+      filter: [
+        "all",
+        ["has", "voltage_numeric"],
+        [">=", ["get", "voltage_numeric"], 140000],
+        ["<", ["get", "voltage_numeric"], 200000]
+      ]
+    });
+  }
+
+  // その他（77kV以下：灰色）
+  if (!map.getLayer(POWER_LAYERS.LINE_OTHER)) {
+    map.addLayer({
+      id: POWER_LAYERS.LINE_OTHER,
+      type: "line",
+      source: POWER_SOURCES.LINES,
+      minzoom: 3,
+      maxzoom: 22,
+      layout: { visibility: "none" },
+      paint: {
+        "line-color": "#999999", 
+        "line-width": [
+          "interpolate", ["linear"], ["zoom"],
+          3, 1.4,
+          8, 2.4,
+          12, 4.0,
+          14, 5.0
+        ],
+        "line-opacity": 1.0
+      },
+      filter: [
+        "any",
+        ["!", ["has", "voltage_numeric"]],
+        ["<", ["get", "voltage_numeric"], 140000]
+      ]
+    });
+  }
+}
 
   function addSubstationLayer() {
     if (!map.getLayer(POWER_LAYERS.SUBSTATION)) {
@@ -176,14 +179,12 @@ export function initPowerLayers(map) {
             "interpolate", ["linear"], ["zoom"],
             5, 3, 10, 5, 14, 8, 22, 12
           ],
-          //"circle-color": "#00bcd4",
-          "circle-color": "#00c8ff",
-          //"circle-stroke-color": "#004d64",
+          "circle-stroke-color": "#004d64",
           "circle-stroke-color": "#ffffff",
           "circle-stroke-width": 1.2,
           "circle-opacity": 0.9,
         },
-      }, BEFORE);
+     });
     }
   }
 
