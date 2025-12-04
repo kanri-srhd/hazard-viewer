@@ -3,7 +3,7 @@
 // ======================================================================
 
 import { initMap } from "./map-init.js";
-import { initUI, initPowerLayerToggles } from "./ui-init.js";
+import { initUI, initPowerLayerToggles, initPowerLegendUI } from "./ui-init.js";
 import { initHazard } from "./hazard-init.js";
 import { initPowerLayers } from "./power-init.js";
 import { detectPrefecture } from "./utils/prefDetect.js";
@@ -22,6 +22,7 @@ document.addEventListener("DOMContentLoaded", () => {
         const powerController = initPowerLayers(map);
 
         initPowerLayerToggles(powerController);
+        initPowerLegendUI(powerController);
 
         window.hazardController = hazardController;
         window.powerController = powerController;
