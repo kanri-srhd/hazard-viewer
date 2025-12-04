@@ -188,7 +188,30 @@ export function initPowerLayers(map) {
     }
   }
 
-  function addLayers() {
+// ========== 変電所ポリゴン（OpenInfraMap風） ==========
+if (!map.getLayer("power-substation-polygons")) {
+  map.addLayer({
+    id: "power-substation-polygons",
+    type: "fill",
+    source: {
+      type: "geojson",
+      data: "data/osm/substation_polygons_base.geojson"
+    },
+    layout: { visibility: "none" },
+    paint: {
+      "fill-color": [
+        "case",
+        [">", ["get", "voltage_numeric"], 300000], "#d6b3ff",   // 500kV〜（紫）
+        [">", ["get", "voltage_numeric"], 100000], "#e8c9a9",   // 154kV〜（薄茶）
+        "#bbbbbb"                                               // その他（灰）
+      ],
+      "fill-opacity": 0.50,
+      "fill-outline-color": "#444444"
+    }
+  });
+}
+
+function addLayers() {
     addSources();
     addLineLayers();
     addSubstationLayer();
@@ -254,30 +277,39 @@ window.updatePowerOpacity = function(opacity) {
   map.setPaintProperty("power-substations", "circle-opacity", opacity);
 };
 
-// 変電所ポイントクリックで情報ポップアップ
 map.on("click", POWER_LAYERS.SUBSTATIONS, (e) => {
   const f = e.features[0];
   const p = f.properties;
 
-  // --- OSM（OpenInfraMap風）基本属性 ---
+  // ---- OSM（OpenInfraMap形式）基本属性 ----
   const name = p.name || "名称未設定";
   const operator = p.operator || "不明";
-  const voltage = p.voltage || p["voltage:primary"] || "不明";
-  const freq = p.frequency || "不明";
+
+  // 電圧（複数対応）
+  // OIM は "154/66 kV" のように voltage:primary, voltage:secondary を / 区切りで表現
+  const v1 = p.voltage || p["voltage:primary"] || null;
+  const v2 = p["voltage:secondary"] || null;
+
+  let voltageString = "電圧不明";
+  if (v1 && v2) voltageString = `${v1}/${v2} kV`;
+  else if (v1) voltageString = `${v1} kV`;
+
+  const freq = p.frequency ? `${p.frequency} Hz` : "";
+  const v_f_line = freq ? `${voltageString} ${freq}` : voltageString;
+
   const ref = p.ref || "-";
   const type = p.substation || p.power || "不明";
 
-  // --- 名寄せ（SRHD標準名に変換）---
+  // ---- 名寄せ ----
   const normalized = window.aliasNormalizer(name);
 
-  // --- SRHD 空容量エンジンから取得 ---
+  // ---- SRHD 空容量データ ----
   const cap = window.capacityEngine.getSubstationCapacity(normalized);
 
   let capacityHTML = "";
 
-  // ------ 空容量データの 3 分類ロジック（あなたの承認済み） ------
   if (cap && cap.available != null) {
-    // ① データが存在する（通常ケース）
+    // ① 正常な容量データあり
     capacityHTML = `
       <tr><th>現容量</th><td>${cap.current_capacity} kW</td></tr>
       <tr><th>N-1 制約</th><td>${cap.n1_constraint ? "有" : "無"}</td></tr>
@@ -285,28 +317,27 @@ map.on("click", POWER_LAYERS.SUBSTATIONS, (e) => {
       <tr><th>更新日</th><td>${cap.updated}</td></tr>
     `;
   } else if (cap && cap.matched === false) {
-    // ② 名寄せ不一致（OSM名と電力会社名簿が一致しない）
+    // ② 名寄せできない（名称揺れ等）
     capacityHTML = `
       <tr><td colspan="2">該当変電所が特定できません（名称不一致）</td></tr>
     `;
   } else {
-    // ③ 電力会社からデータが存在しない地域・非公開・未取得
+    // ③ データ非公開・未取得地域等
     capacityHTML = `
       <tr><td colspan="2">空容量データ非公開（対象外）</td></tr>
     `;
   }
 
-  // --- ポップアップ HTML（OpenInfraMap 風） ---
+  // ---- Popup HTML（OIM風 + SRHD容量統合）----
   const html = `
     <div class="popup-content">
       <h3>${name}</h3>
+      <h4>${v_f_line}</h4>
 
       <table class="popup-table">
         <tr><th>運営者</th><td>${operator}</td></tr>
-        <tr><th>電圧</th><td>${voltage}</td></tr>
-        <tr><th>周波数</th><td>${freq}</td></tr>
         <tr><th>番号</th><td>${ref}</td></tr>
-        <tr><th>種類</th><td>${type}</td></tr>
+        <tr><th>変電所種類</th><td>${type}</td></tr>
       </table>
 
       <h4>空容量（逆潮流）</h4>
