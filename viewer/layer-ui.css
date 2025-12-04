@@ -1,0 +1,92 @@
+/* ======================================================================
+   viewer/layer-ui.css - レイヤーパネル（ハザード・送電線）専用UI
+   ====================================================================== */
+
+/* パネルタイトル */
+.layer-group-title {
+    font-weight: 600;
+    font-size: 15px;
+    padding: 10px 14px;
+    margin: 0;
+    background: #f1f3f4;
+    border-bottom: 1px solid #e0e0e0;
+    color: #202124;
+}
+
+/* レイヤーグループ本体 */
+.layer-group-body {
+    padding: 10px 14px 14px 14px;
+    background: #fff;
+}
+
+/* チェックボックスの並び */
+.layer-toggle-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 10px;
+    cursor: pointer;
+}
+
+.layer-toggle-row:last-child {
+    margin-bottom: 0;
+}
+
+/* チェックボックス */
+.layer-toggle-input {
+    width: 18px;
+    height: 18px;
+    cursor: pointer;
+    accent-color: #4285f4;
+}
+
+/* ラベル */
+.layer-toggle-label {
+    font-size: 14px;
+    color: #202124;
+    cursor: pointer;
+    user-select: none;
+}
+
+/* 送電線カテゴリの強調 */
+.power-layer-group .layer-group-title {
+    background: #e8f0fe;
+    color: #174ea6;
+    border-bottom: 1px solid #c6dafc;
+}
+
+/* PC 版：左側固定パネルに最適化 */
+#layer-panel {
+    overflow-y: auto;
+    padding-bottom: 20px;
+}
+
+/* スクロールバー美化 */
+#layer-panel::-webkit-scrollbar {
+    width: 8px;
+}
+#layer-panel::-webkit-scrollbar-thumb {
+    background: #dadce0;
+    border-radius: 4px;
+}
+#layer-panel::-webkit-scrollbar-thumb:hover {
+    background: #c0c3c7;
+}
+
+/* スマホ版（768px以下） */
+@media (max-width: 768px) {
+    .layer-group-title {
+        font-size: 16px;
+        padding: 12px 16px;
+    }
+    .layer-group-body {
+        padding: 12px 16px 20px 16px;
+    }
+    .layer-toggle-label {
+        font-size: 15px;
+    }
+    .layer-toggle-input {
+        width: 20px;
+        height: 20px;
+    }
+}
