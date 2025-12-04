@@ -254,6 +254,73 @@ window.updatePowerOpacity = function(opacity) {
   map.setPaintProperty("power-substations", "circle-opacity", opacity);
 };
 
+// 変電所ポイントクリックで情報ポップアップ
+map.on("click", POWER_LAYERS.SUBSTATIONS, (e) => {
+  const f = e.features[0];
+  const p = f.properties;
+
+  // --- OSM（OpenInfraMap風）基本属性 ---
+  const name = p.name || "名称未設定";
+  const operator = p.operator || "不明";
+  const voltage = p.voltage || p["voltage:primary"] || "不明";
+  const freq = p.frequency || "不明";
+  const ref = p.ref || "-";
+  const type = p.substation || p.power || "不明";
+
+  // --- 名寄せ（SRHD標準名に変換）---
+  const normalized = window.aliasNormalizer(name);
+
+  // --- SRHD 空容量エンジンから取得 ---
+  const cap = window.capacityEngine.getSubstationCapacity(normalized);
+
+  let capacityHTML = "";
+
+  // ------ 空容量データの 3 分類ロジック（あなたの承認済み） ------
+  if (cap && cap.available != null) {
+    // ① データが存在する（通常ケース）
+    capacityHTML = `
+      <tr><th>現容量</th><td>${cap.current_capacity} kW</td></tr>
+      <tr><th>N-1 制約</th><td>${cap.n1_constraint ? "有" : "無"}</td></tr>
+      <tr><th>空容量</th><td>${cap.available} kW</td></tr>
+      <tr><th>更新日</th><td>${cap.updated}</td></tr>
+    `;
+  } else if (cap && cap.matched === false) {
+    // ② 名寄せ不一致（OSM名と電力会社名簿が一致しない）
+    capacityHTML = `
+      <tr><td colspan="2">該当変電所が特定できません（名称不一致）</td></tr>
+    `;
+  } else {
+    // ③ 電力会社からデータが存在しない地域・非公開・未取得
+    capacityHTML = `
+      <tr><td colspan="2">空容量データ非公開（対象外）</td></tr>
+    `;
+  }
+
+  // --- ポップアップ HTML（OpenInfraMap 風） ---
+  const html = `
+    <div class="popup-content">
+      <h3>${name}</h3>
+
+      <table class="popup-table">
+        <tr><th>運営者</th><td>${operator}</td></tr>
+        <tr><th>電圧</th><td>${voltage}</td></tr>
+        <tr><th>周波数</th><td>${freq}</td></tr>
+        <tr><th>番号</th><td>${ref}</td></tr>
+        <tr><th>種類</th><td>${type}</td></tr>
+      </table>
+
+      <h4>空容量（逆潮流）</h4>
+      <table class="popup-table">
+        ${capacityHTML}
+      </table>
+    </div>
+  `;
+
+  new maplibregl.Popup()
+    .setLngLat(e.lngLat)
+    .setHTML(html)
+    .addTo(map);
+});
 
   return {
     setVisibility,
