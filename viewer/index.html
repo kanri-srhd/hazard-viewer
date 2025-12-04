@@ -21,7 +21,20 @@
 </head>
 
 <body>
-  <!-- ▼ main.js をここで読み込む（これが最重要） -->
+
+  <!-- ▼ 地図描画先（必須） -->
+  <div id="map"></div>
+
+  <!-- ▼ パネル（UI で利用）-->
+  <div id="layer-panel"></div>
+
+  <!-- ▼ メニュー（UI-init.js が初期化）-->
+  <div id="menu-button"></div>
+
+  <!-- ▼ 検索バー（ui-init.js が制御する DOM）-->
+  <div id="search-container"></div>
+
+  <!-- ▼ main.js を読み込む（最重要） -->
   <script type="module" src="./main.js"></script>
 </body>
 </html>
