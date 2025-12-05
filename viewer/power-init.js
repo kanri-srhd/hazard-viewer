@@ -1,10 +1,18 @@
 // viewer/power-init.js
 // ============================================================================
-// 送電線・変電所（OSM）レイヤー初期化（OIM準拠）
+// 送電線・変電所（OSM）レイヤー初期化（UDL方針に沿った UI アダプタ）
 // ============================================================================
-
-// capacity-engine（空容量の入口。実装は stub なので TBD のまま出す）
-import { evaluateCapacity } from "../engines/capacity-engine.js";
+//
+// 役割：
+// - viewer/data/osm/*.geojson を MapLibre ソースとして登録
+// - 送電線レイヤー（500/275/154/その他）と変電所（ポイント＋ポリゴン）を追加
+// - ui-init.js からのトグル要求
+//    "line_500kv" / "line_275kv" / "line_154kv" / "line_other" / "substations"
+//   に応じて可視性を切り替える API を提供
+//
+// 注意：
+// - capacity-engine（空容量）は UDL / Engines で扱うため、ここから直接呼ばない
+//   （README の UDL レイヤ構造に従い、UI層から Engines へ直結しない）
 
 // -----------------------------------------------------------------------------
 // MapLibre インスタンス（共有）
@@ -12,7 +20,7 @@ import { evaluateCapacity } from "../engines/capacity-engine.js";
 let map;
 
 // -----------------------------------------------------------------------------
-// Source / Layer ID（PROJECT_STATE を厳守）
+// Source / Layer ID（PROJECT_STATE を厳守：viewer/data/osm/*）
 // -----------------------------------------------------------------------------
 const POWER_SOURCES = {
   LINES: "power-lines-osm",
@@ -22,10 +30,10 @@ const POWER_SOURCES = {
 
 const POWER_LAYERS = {
   // 送電線
-  BACKBONE_500: "power-line-500kv",
-  BACKBONE_275: "power-line-275kv",
-  GENERAL_154: "power-line-154kv",
-  GENERAL_OTHER: "power-line-other",
+  LINE_500: "power-line-500kv",
+  LINE_275: "power-line-275kv",
+  LINE_154: "power-line-154kv",
+  LINE_OTHER: "power-line-other",
 
   // 変電所
   SUB_POINTS: "power-substations-points-layer",
@@ -33,25 +41,27 @@ const POWER_LAYERS = {
 };
 
 // -----------------------------------------------------------------------------
-// UI 状態（レイヤーパネルと1対1対応）
+// UI 状態（ui-init.js のターゲットキーと 1:1 対応）
 // -----------------------------------------------------------------------------
 const state = {
-  line_backbone: false,   // 500kV + 275kV
-  line_general: false,    // 154kV + その他
-  substations: false,     // ポリゴン + ポイント
+  line_500kv: false,
+  line_275kv: false,
+  line_154kv: false,
+  line_other: false,
+  substations: false, // ポイント + ポリゴン
 };
 
 // -----------------------------------------------------------------------------
 // Utility：レイヤー可視性
 // -----------------------------------------------------------------------------
 function setLayerVisibility(id, visible) {
-  if (map && map.getLayer(id)) {
-    map.setLayoutProperty(id, "visibility", visible ? "visible" : "none");
-  }
+  if (!map) return;
+  if (!map.getLayer(id)) return;
+  map.setLayoutProperty(id, "visibility", visible ? "visible" : "none");
 }
 
 // -----------------------------------------------------------------------------
-// ソース登録（PROJECT_STATE パスを厳守）
+// ソース登録（PROJECT_STATE のパスをそのまま使用）
 // -----------------------------------------------------------------------------
 function addSources() {
   // 送電線
@@ -80,14 +90,13 @@ function addSources() {
 }
 
 // -----------------------------------------------------------------------------
-// 送電線レイヤー（OIM と同等の色分け）
+// 送電線レイヤー（OIM に近い色分け）
 // -----------------------------------------------------------------------------
 function addLineLayers() {
-
   // 500kV（濃赤）
-  if (!map.getLayer(POWER_LAYERS.BACKBONE_500)) {
+  if (!map.getLayer("power-line-500kv")) {
     map.addLayer({
-      id: POWER_LAYERS.BACKBONE_500,
+      id: "power-line-500kv",
       type: "line",
       source: POWER_SOURCES.LINES,
       layout: { visibility: "none" },
@@ -108,9 +117,9 @@ function addLineLayers() {
   }
 
   // 275kV（濃橙）
-  if (!map.getLayer(POWER_LAYERS.BACKBONE_275)) {
+  if (!map.getLayer("power-line-275kv")) {
     map.addLayer({
-      id: POWER_LAYERS.BACKBONE_275,
+      id: "power-line-275kv",
       type: "line",
       source: POWER_SOURCES.LINES,
       layout: { visibility: "none" },
@@ -132,9 +141,9 @@ function addLineLayers() {
   }
 
   // 154kV（黄色）
-  if (!map.getLayer(POWER_LAYERS.GENERAL_154)) {
+  if (!map.getLayer("power-line-154kv")) {
     map.addLayer({
-      id: POWER_LAYERS.GENERAL_154,
+      id: "power-line-154kv",
       type: "line",
       source: POWER_SOURCES.LINES,
       layout: { visibility: "none" },
@@ -156,9 +165,9 @@ function addLineLayers() {
   }
 
   // その他（灰色）
-  if (!map.getLayer(POWER_LAYERS.GENERAL_OTHER)) {
+  if (!map.getLayer("power-line-other")) {
     map.addLayer({
-      id: POWER_LAYERS.GENERAL_OTHER,
+      id: "power-line-other",
       type: "line",
       source: POWER_SOURCES.LINES,
       layout: { visibility: "none" },
@@ -179,12 +188,12 @@ function addLineLayers() {
   }
 }
 
+
 // -----------------------------------------------------------------------------
-// 変電所（OIM と同じポリゴン＋小さなポイント）
+// 変電所レイヤー（OIM と同じポリゴン＋小さなポイント）
 // -----------------------------------------------------------------------------
 function addSubstationLayers() {
-
-  // ポリゴン（OIM と全く同じ色・outline）
+  // ポリゴン
   if (!map.getLayer(POWER_LAYERS.SUB_POLY)) {
     map.addLayer({
       id: POWER_LAYERS.SUB_POLY,
@@ -199,7 +208,7 @@ function addSubstationLayers() {
     });
   }
 
-  // ポイント（OIM の黒い小点に合わせる）
+  // ポイント
   if (!map.getLayer(POWER_LAYERS.SUB_POINTS)) {
     map.addLayer({
       id: POWER_LAYERS.SUB_POINTS,
@@ -209,7 +218,10 @@ function addSubstationLayers() {
       paint: {
         "circle-radius": [
           "interpolate", ["linear"], ["zoom"],
-          4, 2.0, 8, 3.0, 12, 4.0, 14, 5.0
+          4, 2.0,
+          8, 3.0,
+          12, 4.0,
+          14, 5.0,
         ],
         "circle-color": "#000000",
         "circle-stroke-color": "#ffffff",
@@ -217,27 +229,21 @@ function addSubstationLayers() {
       },
     });
 
-    // ポップアップ（OSM + 空容量入口）
-    map.on("click", POWER_LAYERS.SUB_POINTS, async (e) => {
+    // ポップアップ：OSM 属性のみ（容量は後続の UDL/Engines で統合）
+    map.on("click", POWER_LAYERS.SUB_POINTS, (e) => {
       if (!e.features?.length) return;
-
       const props = e.features[0].properties || {};
 
-      // 空容量取得（現状 stub のため TBD）
-      const cap = await evaluateCapacity({
-        lng: e.lngLat.lng,
-        lat: e.lngLat.lat,
-      });
+      const name = props.name || "変電所";
+      const operator = props.operator || props["operator:en"] || "N/A";
+      const voltage =
+        props.voltage || (props.voltage_kv ? `${props.voltage_kv} kV` : "N/A");
 
       const html = `
         <div style="font-size:13px;font-family:sans-serif;line-height:1.4;">
-          <b>${props.name || "変電所"}</b><br>
-          運営者: ${props.operator || "N/A"}<br>
-          電圧: ${props.voltage || "N/A"}<br>
-          <hr style="margin:6px 0;">
-          <b>空容量（試験実装）</b><br>
-          状態: ${cap.overallDecision}<br>
-          逆潮流空容量: ${cap.reverseCapacity.availableKw ?? "TBD"} kW<br>
+          <b>${name}</b><br>
+          運営者: ${operator}<br>
+          電圧: ${voltage}<br>
         </div>
       `;
 
@@ -263,14 +269,20 @@ export function setPowerVisibility(key, visible) {
   state[key] = visible;
 
   switch (key) {
-    case "line_backbone":
-      setLayerVisibility(POWER_LAYERS.BACKBONE_500, visible);
-      setLayerVisibility(POWER_LAYERS.BACKBONE_275, visible);
+    case "line_500kv":
+      setLayerVisibility("power-line-500kv", visible);
       break;
 
-    case "line_general":
-      setLayerVisibility(POWER_LAYERS.GENERAL_154, visible);
-      setLayerVisibility(POWER_LAYERS.GENERAL_OTHER, visible);
+    case "line_275kv":
+      setLayerVisibility("power-line-275kv", visible);
+      break;
+
+    case "line_154kv":
+      setLayerVisibility("power-line-154kv", visible);
+      break;
+
+    case "line_other":
+      setLayerVisibility("power-line-other", visible);
       break;
 
     case "substations":
@@ -283,6 +295,12 @@ export function setPowerVisibility(key, visible) {
 // -----------------------------------------------------------------------------
 // init（main.js の map.on("load") から呼ばれる）
 // -----------------------------------------------------------------------------
+//
+// main.js イメージ：
+//
+//   const powerController = initPowerLayers(map);
+//   initPowerLayerToggles(powerController);
+//
 export function initPowerLayers(mapInstance) {
   map = mapInstance;
 
